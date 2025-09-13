@@ -9,7 +9,7 @@ import { useEditor } from "./editor-context";
 import { ResultsPanel } from "./results-panel";
 
 export function CodeEditor() {
-  const { code, setCode, isLoading, executionResult, setExecutionResult, isExecuting, setIsExecuting } = useEditor();
+  const { code, setCode, language, isLoading, executionResult, setExecutionResult, isExecuting, setIsExecuting } = useEditor();
 
   const handleRun = async () => {
     setIsExecuting(true);
@@ -23,7 +23,7 @@ export function CodeEditor() {
         },
         body: JSON.stringify({
           code: code,
-          language: 'python'
+          language: language
         }),
       });
 
@@ -40,24 +40,31 @@ export function CodeEditor() {
     }
   };
 
+  const getDefaultCode = (lang: 'javascript' | 'python') => {
+    if (lang === 'javascript') {
+      return `// Hello World in JavaScript
+console.log('Hello, World!');
+
+// Example function
+function greet(name) {
+  return \`Hello, \${name}!\`;
+}
+
+console.log(greet('JavaScript'));`;
+    } else {
+      return `# Hello World in Python
+print('Hello, World!')
+
+# Example function
+def greet(name):
+    return f'Hello, {name}!'
+
+print(greet('Python'))`;
+    }
+  };
+
   const handleReset = () => {
-    setCode(`# Creative Writing Prompt Generator
-
-## Task Description
-Generate a compelling short story prompt that encourages creativity and originality.
-
-## Requirements
-- Must be under 100 words
-- Should inspire unique storytelling
-- Include specific constraints or elements
-- Encourage emotional depth
-
-## Example Output
-"Write a story about a librarian who discovers that books in their library are portals to the worlds they contain. However, each time someone enters a book, a character from that story enters our world. Today, three books were left open overnight."
-
-## Your Prompt
-[Write your creative writing prompt here]
-`);
+    setCode(getDefaultCode(language));
   };
 
   return (
@@ -67,11 +74,13 @@ Generate a compelling short story prompt that encourages creativity and original
         <div className="flex items-center space-x-3">
           <div className="flex items-center space-x-2">
             <FileText className="w-4 h-4 text-gray-400" />
-            <span className="text-sm font-medium text-gray-300">prompt-task.md</span>
+            <span className="text-sm font-medium text-gray-300">
+              {language === 'javascript' ? 'code.js' : 'code.py'}
+            </span>
           </div>
-          
+
           <Badge variant="outline" className="text-xs border-gray-600 text-gray-400">
-            Markdown
+            {language === 'javascript' ? 'JavaScript' : 'Python'}
           </Badge>
           
           {isLoading && (
@@ -116,7 +125,7 @@ Generate a compelling short story prompt that encourages creativity and original
       <div className="flex-1">
         <Editor
           height="100%"
-          defaultLanguage="markdown"
+          defaultLanguage={language}
           value={code}
           onChange={(value) => setCode(value || '')}
           theme="vs-dark"
@@ -151,7 +160,7 @@ Generate a compelling short story prompt that encourages creativity and original
         
         <div className="flex items-center space-x-2">
           <Badge className="bg-gray-800 text-gray-300 text-xs">
-            Markdown
+            {language === 'javascript' ? 'JavaScript' : 'Python'}
           </Badge>
         </div>
       </div>

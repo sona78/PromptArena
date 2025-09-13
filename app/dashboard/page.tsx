@@ -82,7 +82,6 @@ export default function DashboardPage() {
             task_id: taskId,
             prompts: [],
             feedback: [],
-            file_system: null,
             state: 0,
             score: 0
           });
