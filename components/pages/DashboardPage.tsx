@@ -1,12 +1,11 @@
-"use client";
+'use client';
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Clock, Target, Zap, Users, Trophy, BookOpen, Code, Lightbulb, Settings, BarChart3 } from "lucide-react";
-import Link from "next/link";
-import { AuthGuard } from "@/components/auth-guard";
-import { LogoutButton } from "@/components/logout-button";
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Clock, Target, Zap, Users, Trophy, BookOpen, Code, Lightbulb, Settings, BarChart3 } from 'lucide-react';
+import Link from 'next/link';
+import { LogoutButton } from '@/components/logout-button';
 
 const challenges = [
   {
@@ -65,7 +64,6 @@ const challenges = [
 
 export default function DashboardPage() {
   return (
-    <AuthGuard>
     <div className="min-h-screen bg-gray-950 text-gray-100 flex flex-col">
       {/* Navigation Bar */}
       <nav className="bg-gray-900 border-b border-gray-800 px-6 py-4">
@@ -201,6 +199,5 @@ export default function DashboardPage() {
         </div>
       </div>
     </div>
-    </AuthGuard>
   );
 }
