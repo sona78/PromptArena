@@ -5,9 +5,22 @@ import { Editor } from '@monaco-editor/react';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Play, RotateCcw, Copy, FileText } from "lucide-react";
+import { useEditor } from "./editor-context";
 
 export function CodeEditor() {
-  const [code, setCode] = useState(`# Creative Writing Prompt Generator
+  const { code, setCode, isLoading } = useEditor();
+  const [isRunning, setIsRunning] = useState(false);
+
+  const handleRun = () => {
+    setIsRunning(true);
+    // Simulate running the prompt
+    setTimeout(() => {
+      setIsRunning(false);
+    }, 2000);
+  };
+
+  const handleReset = () => {
+    setCode(`# Creative Writing Prompt Generator
 
 ## Task Description
 Generate a compelling short story prompt that encourages creativity and originality.
@@ -24,15 +37,6 @@ Generate a compelling short story prompt that encourages creativity and original
 ## Your Prompt
 [Write your creative writing prompt here]
 `);
-
-  const [isRunning, setIsRunning] = useState(false);
-
-  const handleRun = () => {
-    setIsRunning(true);
-    // Simulate running the prompt
-    setTimeout(() => {
-      setIsRunning(false);
-    }, 2000);
   };
 
   return (
@@ -48,6 +52,12 @@ Generate a compelling short story prompt that encourages creativity and original
           <Badge variant="outline" className="text-xs border-gray-600 text-gray-400">
             Markdown
           </Badge>
+          
+          {isLoading && (
+            <Badge className="bg-blue-900 text-blue-200 text-xs animate-pulse">
+              Generating...
+            </Badge>
+          )}
         </div>
         
         <div className="flex items-center space-x-2">
@@ -63,7 +73,8 @@ Generate a compelling short story prompt that encourages creativity and original
             variant="ghost"
             size="sm"
             className="text-gray-400 hover:text-white hover:bg-gray-800"
-            onClick={() => setCode('')}
+            onClick={handleReset}
+            disabled={isLoading}
           >
             <RotateCcw className="w-4 h-4" />
           </Button>
@@ -72,7 +83,7 @@ Generate a compelling short story prompt that encourages creativity and original
             size="sm"
             className="bg-emerald-600 hover:bg-emerald-700 text-white"
             onClick={handleRun}
-            disabled={isRunning}
+            disabled={isRunning || isLoading}
           >
             <Play className="w-4 h-4 mr-1" />
             {isRunning ? 'Testing...' : 'Test Prompt'}
@@ -104,6 +115,7 @@ Generate a compelling short story prompt that encourages creativity and original
             autoIndent: 'full',
             formatOnPaste: true,
             formatOnType: true,
+            readOnly: isLoading,
           }}
         />
       </div>

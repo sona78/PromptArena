@@ -15,10 +15,59 @@ import {
   Star,
   Clock
 } from "lucide-react";
+import { useEditor } from "./editor-context";
 
 export function PromptPanel() {
   const [prompt, setPrompt] = useState('');
   const [activeTab, setActiveTab] = useState('write');
+  const { setCode, isLoading, setIsLoading } = useEditor();
+
+  const handleSubmit = async () => {
+    if (!prompt.trim()) {
+      return;
+    }
+
+    setIsLoading(true);
+    
+    try {
+      const response = await fetch('/api/claude', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ prompt }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Update the editor with Claude's response
+        setCode(data.content);
+      } else {
+        // Handle error - show in editor
+        setCode(`# Error calling Claude API
+
+**Error:** ${data.error}
+
+**Original Prompt:**
+${prompt}
+
+Please try again or check your configuration.`);
+      }
+    } catch (error) {
+      // Handle network error
+      setCode(`# Network Error
+
+**Error:** Failed to connect to Claude API
+
+**Original Prompt:**
+${prompt}
+
+Please check your internet connection and try again.`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const tabs = [
     { id: 'write', label: 'Write Prompt', icon: MessageSquare },
@@ -66,6 +115,7 @@ export function PromptPanel() {
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 className="min-h-32 bg-gray-900 border-gray-700 text-gray-100 resize-none focus:border-blue-500"
+                disabled={isLoading}
               />
               <div className="text-xs text-gray-500">
                 {prompt.length}/500 characters
@@ -89,9 +139,13 @@ export function PromptPanel() {
               </div>
             </div>
 
-            <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">
+            <Button 
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+              onClick={handleSubmit}
+              disabled={isLoading || !prompt.trim()}
+            >
               <Send className="w-4 h-4 mr-2" />
-              Submit Prompt
+              {isLoading ? 'Calling Claude...' : 'Submit Prompt'}
             </Button>
 
             <div className="pt-4 border-t border-gray-800">
