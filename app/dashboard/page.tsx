@@ -1,11 +1,12 @@
-'use client';
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
 
-import { Navigation } from "@/components/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Clock, Target, Zap, Users, Trophy, BookOpen, Code, Lightbulb } from "lucide-react";
+import { Clock, Target, Zap, Users, Trophy, BookOpen, Code, Lightbulb, Settings, BarChart3, LogOut } from "lucide-react";
 import Link from "next/link";
+import { signOutAction } from "@/app/auth/actions";
 
 const challenges = [
   {
@@ -62,12 +63,63 @@ const challenges = [
   }
 ];
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase.auth.getClaims();
+  if (error || !data?.claims) {
+    redirect("/auth/login");
+  }
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100 flex flex-col">
       {/* Navigation Bar */}
-      <Navigation />
-      
+      <nav className="bg-gray-900 border-b border-gray-800 px-6 py-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-6">
+            <div className="flex items-center space-x-2">
+              <Trophy className="w-6 h-6 text-blue-400" />
+              <span className="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+                PromptArena
+              </span>
+              <Badge variant="outline" className="text-xs border-gray-600 text-gray-400">
+                Beta
+              </Badge>
+            </div>
+
+            <div className="flex items-center space-x-1">
+              <Button variant="ghost" size="sm" className="text-gray-300 hover:text-white hover:bg-gray-800">
+                <BarChart3 className="w-4 h-4 mr-2" />
+                Leaderboard
+              </Button>
+              <Button variant="ghost" size="sm" className="text-gray-300 hover:text-white hover:bg-gray-800">
+                <Users className="w-4 h-4 mr-2" />
+                Battles
+              </Button>
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2 text-sm text-gray-400">
+              <span>Rank:</span>
+              <Badge className="bg-blue-900 text-blue-200 border-blue-700">
+                #1,247
+              </Badge>
+            </div>
+
+            <Button variant="ghost" size="sm" className="text-gray-300 hover:text-white hover:bg-gray-800">
+              <Settings className="w-4 h-4" />
+            </Button>
+
+            <form action={signOutAction}>
+              <Button variant="ghost" size="sm" className="text-gray-300 hover:text-white hover:bg-gray-800" type="submit">
+                <LogOut className="w-4 h-4 mr-2" />
+                Logout
+              </Button>
+            </form>
+          </div>
+        </div>
+      </nav>
+
       {/* Dashboard Header */}
       <div className="bg-gray-900 border-b border-gray-800 px-6 py-6">
         <div className="flex items-center justify-between">
@@ -79,7 +131,7 @@ export default function DashboardPage() {
               </h1>
             </div>
           </div>
-          
+
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-2 text-sm text-gray-400">
               <Users className="w-4 h-4" />
@@ -87,15 +139,15 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
-        
+
         <div className="mt-3 text-sm text-gray-400">
           <p>Choose a challenge to test your prompt engineering skills against other humans.</p>
         </div>
       </div>
       
       {/* Main Content - Challenge Cards */}
-      <div className="flex-1 p-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      <div className="flex-1 w-full p-6">
+        <div className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
           {challenges.map((challenge) => {
             const IconComponent = challenge.icon;
             return (
@@ -144,7 +196,7 @@ export default function DashboardPage() {
                     </div>
                   </div>
                   
-                  <Link href="/protected/editor" className="block">
+                  <Link href="/editor" className="block">
                     <Button 
                       className="w-full bg-blue-600 hover:bg-blue-700 text-white" 
                       size="sm"
