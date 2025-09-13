@@ -3,13 +3,14 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Settings, Users, Trophy, BarChart3 } from "lucide-react";
+import Link from "next/link";
 
 export function Navigation() {
   return (
     <nav className="bg-gray-900 border-b border-gray-800 px-6 py-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-6">
-          <div className="flex items-center space-x-2">
+          <Link href="/dashboard" className="flex items-center space-x-2 hover:opacity-80 transition-opacity cursor-pointer">
             <Trophy className="w-6 h-6 text-blue-400" />
             <span className="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
               PromptArena
@@ -17,7 +18,7 @@ export function Navigation() {
             <Badge variant="outline" className="text-xs border-gray-600 text-gray-400">
               Beta
             </Badge>
-          </div>
+          </Link>
           
           <div className="flex items-center space-x-1">
             <Button variant="ghost" size="sm" className="text-gray-300 hover:text-white hover:bg-gray-800">

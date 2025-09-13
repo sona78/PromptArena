@@ -6,17 +6,38 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Play, RotateCcw, Copy, FileText } from "lucide-react";
 import { useEditor } from "./editor-context";
+import { ResultsPanel } from "./results-panel";
 
 export function CodeEditor() {
-  const { code, setCode, isLoading } = useEditor();
-  const [isRunning, setIsRunning] = useState(false);
+  const { code, setCode, isLoading, executionResult, setExecutionResult, isExecuting, setIsExecuting } = useEditor();
 
-  const handleRun = () => {
-    setIsRunning(true);
-    // Simulate running the prompt
-    setTimeout(() => {
-      setIsRunning(false);
-    }, 2000);
+  const handleRun = async () => {
+    setIsExecuting(true);
+    setExecutionResult(null);
+    
+    try {
+      const response = await fetch('/api/execute-code', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          code: code,
+          language: 'python'
+        }),
+      });
+
+      const result = await response.json();
+      setExecutionResult(result);
+    } catch (error) {
+      setExecutionResult({
+        success: false,
+        output: '',
+        error: 'Failed to execute code: Network error'
+      });
+    } finally {
+      setIsExecuting(false);
+    }
   };
 
   const handleReset = () => {
@@ -83,10 +104,10 @@ Generate a compelling short story prompt that encourages creativity and original
             size="sm"
             className="bg-emerald-600 hover:bg-emerald-700 text-white"
             onClick={handleRun}
-            disabled={isRunning || isLoading}
+            disabled={isExecuting || isLoading}
           >
             <Play className="w-4 h-4 mr-1" />
-            {isRunning ? 'Testing...' : 'Test Prompt'}
+            {isExecuting ? 'Running...' : 'Test Prompt'}
           </Button>
         </div>
       </div>
@@ -134,6 +155,9 @@ Generate a compelling short story prompt that encourages creativity and original
           </Badge>
         </div>
       </div>
+      
+      {/* Results Panel */}
+      <ResultsPanel result={executionResult} isRunning={isExecuting} />
     </div>
   );
 }

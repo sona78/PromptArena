@@ -20,7 +20,7 @@ import { useEditor } from "./editor-context";
 export function PromptPanel() {
   const [prompt, setPrompt] = useState('');
   const [activeTab, setActiveTab] = useState('write');
-  const { setCode, isLoading, setIsLoading } = useEditor();
+  const { code, setCode, isLoading, setIsLoading } = useEditor();
 
   const handleSubmit = async () => {
     if (!prompt.trim()) {
@@ -29,20 +29,35 @@ export function PromptPanel() {
 
     setIsLoading(true);
     
+    const finalPrompt = `Modify the following code according to this request: ${prompt}
+
+Return only the complete updated code, no explanations.
+
+Current code:
+\`\`\`
+${code}
+\`\`\``;
     try {
       const response = await fetch('/api/claude', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ prompt }),
+        body: JSON.stringify({ prompt: finalPrompt }),
       });
 
       const data = await response.json();
 
       if (data.success) {
-        // Update the editor with Claude's response
-        setCode(data.content);
+        // Strip markdown code blocks from Claude's response
+        let cleanedCode = data.content;
+        
+        // Remove code block markers (```python, ```javascript, etc.)
+        cleanedCode = cleanedCode.replace(/^```\w*\n?/gm, '');
+        cleanedCode = cleanedCode.replace(/\n?```$/gm, '');
+        
+        // Update the editor with cleaned response
+        setCode(cleanedCode.trim());
       } else {
         // Handle error - show in editor
         setCode(`# Error calling Claude API
