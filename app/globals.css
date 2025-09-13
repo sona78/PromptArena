@@ -64,5 +64,44 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
   }
+}
+
+/* Custom scrollbar for dark theme */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgb(17, 24, 39);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgb(55, 65, 81);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgb(75, 85, 99);
+}
+
+/* Monaco Editor custom styling */
+.monaco-editor {
+  background-color: rgb(3, 7, 18) !important;
+}
+
+.monaco-editor .margin {
+  background-color: rgb(17, 24, 39) !important;
+}
+
+/* Custom gradient backgrounds */
+.gradient-bg {
+  background: linear-gradient(135deg, rgb(30, 41, 59) 0%, rgb(15, 23, 42) 100%);
+}
+
+/* Smooth transitions */
+* {
+  transition: border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease;
 }
