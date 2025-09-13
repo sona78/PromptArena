@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import os
 import anthropic
+import json
 
 # Load environment variables (if using .env)
 from dotenv import load_dotenv
@@ -44,19 +45,22 @@ async def evaluate_prompt(request: PromptRequest):
 
         Task:
 
-        Given the user prompt below, evaluate it on each metric:
-        - Provide a short score (e.g. from 1-5) for each metric.
-        - For each metric, state what the prompt does well, and what could be improved.
-        - Finally, give an overall assessment and suggestions for rewriting or optimizing the prompt (if applicable).
+        Given the user prompt below, evaluate it on each metric and then give it a score out of 10. 
+        Return the score in a json format with key "score" as the only field.
+        Your response should be in the following format:
+        {
+            "score": 10
+        }
 
         ---
 
+        User Prompt:
         """
     )
     
     try:
         response = client.messages.create(
-            model="claude-3-5-sonnet",  # or another Claude model you prefer
+            model="claude-sonnet-4-20250514",  # or another Claude model you prefer
             messages=[
                 {"role": "system", "content": system_instruction},
                 {"role": "user", "content": prompt_text}
@@ -69,5 +73,7 @@ async def evaluate_prompt(request: PromptRequest):
 
     # The content of Claude’s response
     evaluation = response["completion"]  # or `.message.content` depending on version of SDK
+    data = json.loads(evaluation)
 
-    return {"evaluation": evaluation}
+    score = data["score"]
+    return score
