@@ -7,13 +7,13 @@ import tempfile
 import os
 from contextlib import redirect_stdout, redirect_stderr
 from typing import Dict, Any
-import anthropic
 
 # Create Modal app
 app = modal.App("code-executor")
 
 # Define the image with necessary packages
 image = modal.Image.debian_slim().pip_install([
+    "anthropic",
     "numpy",
     "pandas", 
     "matplotlib",
@@ -21,11 +21,15 @@ image = modal.Image.debian_slim().pip_install([
     "beautifulsoup4",
     "pillow",
     "scikit-learn",
-    "seaborn",
-    "anthropic"
+    "seaborn"
 ])
 
-from config import CLAUDE_API_KEY
+# Separate web image for endpoints
+web_image = modal.Image.debian_slim().pip_install([
+    "fastapi",
+    "uvicorn",
+    "anthropic"
+])
 
 @app.function(
     image=image,
@@ -278,6 +282,7 @@ def call_claude_api(prompt: str, model: str = "claude-sonnet-4-20250514") -> Dic
     Returns:
         Dictionary with API response including content, success status, and any errors
     """
+    import anthropic
     result = {
         "success": False,
         "content": "",
@@ -285,6 +290,8 @@ def call_claude_api(prompt: str, model: str = "claude-sonnet-4-20250514") -> Dic
         "model": model,
         "usage": {}
     }
+
+    CLAUDE_API_KEY = os.getenv("CLAUDE_API_KEY")
     
     try:
         # Initialize the Anthropic client
@@ -322,9 +329,9 @@ def call_claude_api(prompt: str, model: str = "claude-sonnet-4-20250514") -> Dic
     return result
 
 # Web endpoint for HTTP requests
-@app.function()
+@app.function(image=web_image)
 @modal.fastapi_endpoint(method="POST")
-def execute_code_endpoint(code: str, language: str = "python"):
+async def execute_code_endpoint(code: str, language: str = "python"):
     """
     Web endpoint to execute code via HTTP POST request.
     
@@ -338,13 +345,13 @@ def execute_code_endpoint(code: str, language: str = "python"):
         return {"error": "No code provided", "success": False}
     
     # Execute the code
-    result = execute_code.remote(code, language)
+    result = await execute_code.remote.aio(code, language)
     return result
 
 # Web endpoint for Claude API calls
-@app.function()
+@app.function(image=web_image)
 @modal.fastapi_endpoint(method="POST")
-def claude_api_endpoint(prompt: str, model: str = "claude-sonnet-4-20250514"):
+async def claude_api_endpoint(prompt: str, model: str = "claude-sonnet-4-20250514"):
     """
     Web endpoint to call Claude API via HTTP POST request.
     
@@ -358,7 +365,7 @@ def claude_api_endpoint(prompt: str, model: str = "claude-sonnet-4-20250514"):
         return {"error": "No prompt provided", "success": False}
     
     # Call Claude API
-    result = call_claude_api.remote(prompt, model)
+    result = await call_claude_api.remote.aio(prompt, model)
     return result
 
 if __name__ == "__main__":
