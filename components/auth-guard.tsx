@@ -13,36 +13,59 @@ interface AuthGuardProps {
 export function AuthGuard({ children, fallback }: AuthGuardProps) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [shouldRedirect, setShouldRedirect] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) {
-        router.push("/auth/login");
-        return;
-      }
-      setUser(user);
-      setLoading(false);
-    });
+    const checkAuth = async () => {
+      try {
+        const { data: { user }, error } = await supabase.auth.getUser();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
-      if (!session?.user) {
-        router.push("/auth/login");
+        if (error || !user) {
+          setShouldRedirect(true);
+          return;
+        }
+
+        setUser(user);
+      } catch (error) {
+        console.error('Auth check error:', error);
+        setShouldRedirect(true);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkAuth();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_OUT' || !session?.user) {
+        setUser(null);
+        setShouldRedirect(true);
         return;
       }
-      setUser(session.user);
-      setLoading(false);
+
+      if (session?.user) {
+        setUser(session.user);
+        setShouldRedirect(false);
+        setLoading(false);
+      }
     });
 
     return () => subscription.unsubscribe();
-  }, [router]);
+  }, []);
+
+  useEffect(() => {
+    if (shouldRedirect && !loading) {
+      router.push("/auth/login");
+    }
+  }, [shouldRedirect, loading, router]);
 
   if (loading) {
     return fallback || <div className="flex items-center justify-center min-h-screen">Loading...</div>;
   }
 
-  if (!user) {
-    return null;
+  if (shouldRedirect || !user) {
+    return fallback || <div className="flex items-center justify-center min-h-screen">Redirecting...</div>;
   }
 
   return <>{children}</>;

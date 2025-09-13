@@ -1,8 +1,8 @@
 import "./globals.css";
 
 export const metadata = {
-  title: "Next.js Supabase Starter",
-  description: "The fastest way to build apps with Next.js and Supabase",
+  title: "PromptArena - Test Your Prompt Engineering Skills",
+  description: "Compete with other humans in prompt engineering challenges",
 };
 
 export default function RootLayout({
