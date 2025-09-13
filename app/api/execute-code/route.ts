@@ -11,22 +11,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Modal endpoint URL
-    const modalEndpointUrl = 'https://playground-hackmit--code-executor-execute-code-endpoint.modal.run';
+    // Modal endpoint URL with query parameters
+    const modalEndpointUrl = new URL('https://playground-hackmit--code-executor-execute-code-endpoint.modal.run');
+    modalEndpointUrl.searchParams.append('code', code);
+    modalEndpointUrl.searchParams.append('language', language);
 
     // Call Modal execute_code endpoint
-    const response = await fetch(modalEndpointUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        code,
-        language
-      })
+    const response = await fetch(modalEndpointUrl.toString(), {
+      method: 'POST'
     });
 
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Modal API error:', response.status, errorText);
       return NextResponse.json(
         { error: `Modal API error: ${response.status} ${response.statusText}` },
         { status: response.status }
