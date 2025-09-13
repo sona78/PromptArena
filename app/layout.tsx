@@ -1,5 +1,4 @@
 import "./globals.css";
-import App from "@/components/App";
 
 export const metadata = {
   title: "Next.js Supabase Starter",
@@ -14,7 +13,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <App />
+        {children}
       </body>
     </html>
   );
