@@ -341,6 +341,26 @@ def execute_code_endpoint(code: str, language: str = "python"):
     result = execute_code.remote(code, language)
     return result
 
+# Web endpoint for Claude API calls
+@app.function()
+@modal.fastapi_endpoint(method="POST")
+def claude_api_endpoint(prompt: str, model: str = "claude-sonnet-4-20250514"):
+    """
+    Web endpoint to call Claude API via HTTP POST request.
+    
+    Expected JSON payload:
+    {
+        "prompt": "Tell me a story about a dog.",
+        "model": "claude-sonnet-4-20250514"
+    }
+    """
+    if not prompt:
+        return {"error": "No prompt provided", "success": False}
+    
+    # Call Claude API
+    result = call_claude_api.remote(prompt, model)
+    return result
+
 if __name__ == "__main__":
     # For local testing
     '''

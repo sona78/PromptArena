@@ -5,6 +5,7 @@ import { CodeEditor } from "@/components/code-editor";
 import { PromptPanel } from "@/components/prompt-panel";
 import { Navigation } from "@/components/navigation";
 import { TaskHeader } from "@/components/task-header";
+import { EditorProvider } from "@/components/editor-context";
 
 export default async function EditorPage() {
   const supabase = await createClient();
@@ -22,17 +23,19 @@ export default async function EditorPage() {
       <TaskHeader />
       
       {/* Main Content Area */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Left Panel - Monaco Code Editor */}
-        <div className="flex-1 border-r border-gray-800">
-          <CodeEditor />
+      <EditorProvider>
+        <div className="flex-1 flex overflow-hidden">
+          {/* Left Panel - Monaco Code Editor */}
+          <div className="flex-1 border-r border-gray-800">
+            <CodeEditor />
+          </div>
+          
+          {/* Right Panel - Prompt Writing */}
+          <div className="w-96 flex flex-col">
+            <PromptPanel />
+          </div>
         </div>
-        
-        {/* Right Panel - Prompt Writing */}
-        <div className="w-96 flex flex-col">
-          <PromptPanel />
-        </div>
-      </div>
+      </EditorProvider>
     </div>
   );
 }
