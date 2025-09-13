@@ -51,8 +51,6 @@ async def evaluate_prompt(request: PromptRequest):
 
         ---
 
-        User Prompt:
-        {prompt_text}
         """
     )
     
