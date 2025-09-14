@@ -60,14 +60,24 @@ export function FileSystemSidebar({ sessionId }: FileSystemSidebarProps) {
       // Build file tree structure
       let fileTree = buildFileTree(data || []);
 
-      // Add test file to the file tree if it exists and is not already in the list
+      // Only add test file to the file tree if it exists in storage and is not already in the list
       if (testFile && !fileTree.some(f => f.name === testFile)) {
-        fileTree.push({
-          name: testFile,
-          path: `${sessionId}/${testFile}`,
-          type: 'file',
-          isExpanded: false
-        });
+        // Check if test file actually exists in storage
+        const { data: testFileData, error: testFileError } = await supabase.storage
+          .from('Sessions')
+          .list(sessionId, {
+            search: testFile
+          });
+
+        // Only add if the test file exists in storage
+        if (!testFileError && testFileData && testFileData.some(file => file.name === testFile)) {
+          fileTree.push({
+            name: testFile,
+            path: `${sessionId}/${testFile}`,
+            type: 'file',
+            isExpanded: false
+          });
+        }
       }
 
       setFiles(fileTree);

@@ -90,7 +90,7 @@ export function TaskHeader({ sessionId }: TaskHeaderProps) {
                 Active
               </Badge>
               <Badge variant="outline" className="border-stone-300 text-stone-600 font-light px-3 py-1">
-                Type: {task?.type || 0}
+                {task?.type === 0 ? 'Backend' : task?.type === 1 ? 'Frontend' : task?.type === 2 ? 'Machine Learning' : `Type ${task?.type || 0}`}
               </Badge>
             </div>
           </div>

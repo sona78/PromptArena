@@ -229,7 +229,7 @@ export default function DashboardPage() {
                         <Target className="w-6 h-6 text-stone-600" />
                       </div>
                       <Badge variant="outline" className="border-stone-200 text-stone-500 text-xs font-light bg-stone-50 px-3 py-1">
-                        Type {task.type}
+                        {task.type === 0 ? 'Backend' : task.type === 1 ? 'Frontend' : task.type === 2 ? 'Machine Learning' : `Type ${task.type}`}
                       </Badge>
                     </div>
                     <CardTitle className="text-stone-800 text-2xl font-light leading-relaxed tracking-wide">
