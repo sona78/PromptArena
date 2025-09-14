@@ -37,6 +37,9 @@ interface EditorContextType {
   setIsExecuting: (executing: boolean) => void;
   isSaving: boolean;
   hasUnsavedChanges: boolean;
+  saveError: string | null;
+  setSaveError: (error: string | null) => void;
+  lastSaveTime: number | null;
   promptQualityScore: number;
   setPromptQualityScore: (score: number) => void;
   promptMetrics: Record<string, unknown> | null;
@@ -82,6 +85,8 @@ export function EditorProvider({ children }: { children: ReactNode }) {
   const [isExecuting, setIsExecuting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [lastSaveTime, setLastSaveTime] = useState<number | null>(null);
   const [promptQualityScore, setPromptQualityScore] = useState(0);
   const [promptMetrics, setPromptMetrics] = useState<Record<string, unknown> | null>(null);
   const [codeEvaluationScore, setCodeEvaluationScore] = useState<number | null>(null);
@@ -101,19 +106,37 @@ export function EditorProvider({ children }: { children: ReactNode }) {
   const openFile = async (path: string, name: string) => {
     try {
       setIsLoading(true);
+      setSaveError(null);
 
       // If there's an active file with unsaved changes, save it first
-      if (activeFile && hasUnsavedChanges) {
+      if (activeFile && hasUnsavedChanges && !isSaving) {
+        console.log('Saving current file before opening new one');
         await saveFile(true); // Skip UI state update for faster transition
+        // Wait a moment to ensure save completes
+        await new Promise(resolve => setTimeout(resolve, 100));
       }
 
-      // Add cache busting timestamp to ensure we get the latest version
-      const cacheBuster = `?t=${Date.now()}`;
+      // Add cache busting by creating a new storage client request
+      const cacheBuster = Date.now();
+      console.log('Opening file with cache buster:', path, cacheBuster);
+      
+      // First try to get the file metadata to ensure it exists
+      const { data: fileInfo, error: infoError } = await supabase.storage
+        .from('Sessions')
+        .list(path.split('/').slice(0, -1).join('/'), {
+          search: path.split('/').pop()
+        });
+      
+      if (infoError || !fileInfo || fileInfo.length === 0) {
+        throw new Error(`File not found: ${path}`);
+      }
+      
       const { data, error } = await supabase.storage
         .from('Sessions')
         .download(path);
 
       if (error) {
+        console.error('Error downloading file:', error);
         throw error;
       }
 
@@ -124,28 +147,46 @@ export function EditorProvider({ children }: { children: ReactNode }) {
         name,
         path,
         content,
-        language: fileLanguage
+        language: fileLanguage,
+        lastSaved: Date.now()
       };
 
       setActiveFile(file);
       setCode(content);
+      setHasUnsavedChanges(false);
+      setSaveError(null);
 
       if (fileLanguage !== 'text') {
         setLanguageState(fileLanguage);
       }
     } catch (error) {
       console.error('Error opening file:', error);
-      // Handle error - maybe show a toast or error message
+      let errorMessage = 'Unknown error';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (typeof error === 'object' && error !== null) {
+        errorMessage = JSON.stringify(error);
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      }
+      setSaveError(`Failed to open file: ${errorMessage}`);
     } finally {
       setIsLoading(false);
     }
   };
 
   const saveFile = async (skipStateUpdate = false) => {
-    if (!activeFile || isSaving) return;
+    if (!activeFile) return;
+    
+    // Prevent concurrent saves
+    if (isSaving) {
+      console.log('Save already in progress, skipping');
+      return;
+    }
 
     try {
       if (!skipStateUpdate) setIsSaving(true);
+      setSaveError(null);
 
       console.log('Saving file:', activeFile.path, 'Content length:', code.length);
 
@@ -159,22 +200,28 @@ export function EditorProvider({ children }: { children: ReactNode }) {
 
       if (error) {
         console.error('Supabase storage error:', error);
+        setSaveError(`Failed to save: ${error.message}`);
         throw error;
       }
 
       console.log('File saved successfully:', activeFile.path);
+      const saveTimestamp = Date.now();
 
       // Update the active file content immediately with timestamp for cache busting
       setActiveFile({
         ...activeFile,
         content: code,
-        lastSaved: Date.now()
+        lastSaved: saveTimestamp
       });
 
       setHasUnsavedChanges(false);
+      setLastSaveTime(saveTimestamp);
+      setSaveError(null);
     } catch (error) {
       console.error('Error saving file:', error);
-      // Handle error - maybe show a toast or error message
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      setSaveError(`Save failed: ${errorMessage}`);
+      // Don't clear hasUnsavedChanges on error so user knows there are unsaved changes
     } finally {
       if (!skipStateUpdate) setIsSaving(false);
     }
@@ -635,27 +682,29 @@ export function EditorProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // Debounced auto-save function
+  // Debounced auto-save function with better error handling
   const debouncedAutoSave = useDebounce(async () => {
     if (activeFile && hasUnsavedChanges && !isSaving) {
+      console.log('Auto-saving file:', activeFile.name);
       try {
-        setIsSaving(true);
         await saveFile(true);
-      } finally {
-        setIsSaving(false);
+      } catch (error) {
+        console.error('Auto-save failed:', error);
       }
     }
-  }, 500); // Auto-save after 500ms of inactivity
+  }, 1000); // Auto-save after 1 second of inactivity (increased for better UX)
 
   // Track changes and trigger auto-save
   useEffect(() => {
     if (activeFile && code !== activeFile.content) {
-      setHasUnsavedChanges(true);
+      if (!hasUnsavedChanges) {
+        setHasUnsavedChanges(true);
+      }
       debouncedAutoSave();
-    } else {
+    } else if (activeFile && code === activeFile.content) {
       setHasUnsavedChanges(false);
     }
-  }, [code, activeFile, debouncedAutoSave]);
+  }, [code, activeFile, debouncedAutoSave, hasUnsavedChanges]);
 
   // Update code when activeFile content changes
   useEffect(() => {
@@ -684,6 +733,9 @@ export function EditorProvider({ children }: { children: ReactNode }) {
       setIsExecuting,
       isSaving,
       hasUnsavedChanges,
+      saveError,
+      setSaveError,
+      lastSaveTime,
       promptQualityScore,
       setPromptQualityScore,
       promptMetrics,

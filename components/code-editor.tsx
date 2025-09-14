@@ -24,6 +24,9 @@ export function CodeEditor() {
     isExecuting,
     isSaving,
     hasUnsavedChanges,
+    saveError,
+    setSaveError,
+    lastSaveTime,
     taskType,
     htmlOutput,
     executeMultiFile
@@ -89,6 +92,12 @@ export function CodeEditor() {
             {isSaving && (
               <span className="text-xs text-[#3073B7] animate-pulse" title="Auto-saving...">💾</span>
             )}
+            {saveError && (
+              <span className="text-xs text-red-500" title={saveError}>⚠️</span>
+            )}
+            {lastSaveTime && !hasUnsavedChanges && !saveError && (
+              <span className="text-xs text-green-500" title={`Last saved: ${new Date(lastSaveTime).toLocaleTimeString()}`}>✓</span>
+            )}
           </div>
           {activeFile && (
             <Badge variant="outline" className="text-xs border-[#79797C] text-[#79797C]">
@@ -115,8 +124,12 @@ export function CodeEditor() {
               variant="ghost"
               size="sm"
               className="text-gray-400 hover:text-white hover:bg-gray-800"
-              onClick={() => saveFile()}
-              disabled={isLoading || isSaving || !hasUnsavedChanges}
+              onClick={() => {
+                setSaveError(null);
+                saveFile();
+              }}
+              disabled={isLoading || isSaving || (!hasUnsavedChanges && !saveError)}
+              title={saveError ? 'Retry save' : hasUnsavedChanges ? 'Save file' : 'No changes to save'}
             >
               <Save className="w-4 h-4" />
             </Button>
@@ -211,7 +224,17 @@ export function CodeEditor() {
       {/* Status Bar */}
       <div className="bg-[#C5AECF]/10 border-t border-[#79797C] px-4 py-2 flex items-center justify-between text-xs text-[#79797C]">
         <div className="flex items-center space-x-4">
-          <span>Ready</span>
+          {saveError ? (
+            <span className="text-red-500 font-medium">{saveError}</span>
+          ) : isSaving ? (
+            <span className="text-[#3073B7]">Auto-saving...</span>
+          ) : hasUnsavedChanges ? (
+            <span className="text-[#D79D00]">Unsaved changes</span>
+          ) : lastSaveTime ? (
+            <span className="text-green-600">Saved at {new Date(lastSaveTime).toLocaleTimeString()}</span>
+          ) : (
+            <span>Ready</span>
+          )}
           {activeFile && (
             <span>Language: {activeFile.language}</span>
           )}
