@@ -16,6 +16,7 @@ interface ActiveFile {
   path: string;
   content: string;
   language: 'javascript' | 'python' | 'text';
+  lastSaved?: number;
 }
 
 interface EditorContextType {
@@ -106,6 +107,8 @@ export function EditorProvider({ children }: { children: ReactNode }) {
         await saveFile(true); // Skip UI state update for faster transition
       }
 
+      // Add cache busting timestamp to ensure we get the latest version
+      const cacheBuster = `?t=${Date.now()}`;
       const { data, error } = await supabase.storage
         .from('Sessions')
         .download(path);
@@ -144,18 +147,28 @@ export function EditorProvider({ children }: { children: ReactNode }) {
     try {
       if (!skipStateUpdate) setIsSaving(true);
 
+      console.log('Saving file:', activeFile.path, 'Content length:', code.length);
+
+      // Use upload with upsert option instead of update for better reliability
       const { error } = await supabase.storage
         .from('Sessions')
-        .update(activeFile.path, new Blob([code], { type: 'text/plain' }));
+        .upload(activeFile.path, new Blob([code], { type: 'text/plain' }), {
+          cacheControl: '0', // Disable caching
+          upsert: true // Overwrite existing file
+        });
 
       if (error) {
+        console.error('Supabase storage error:', error);
         throw error;
       }
 
-      // Update the active file content
+      console.log('File saved successfully:', activeFile.path);
+
+      // Update the active file content immediately with timestamp for cache busting
       setActiveFile({
         ...activeFile,
-        content: code
+        content: code,
+        lastSaved: Date.now()
       });
 
       setHasUnsavedChanges(false);
@@ -632,7 +645,7 @@ export function EditorProvider({ children }: { children: ReactNode }) {
         setIsSaving(false);
       }
     }
-  }, 1000); // Auto-save after 2 seconds of inactivity
+  }, 500); // Auto-save after 500ms of inactivity
 
   // Track changes and trigger auto-save
   useEffect(() => {

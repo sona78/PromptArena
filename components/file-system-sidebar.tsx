@@ -80,31 +80,6 @@ export function FileSystemSidebar({ sessionId }: FileSystemSidebarProps) {
       }
 
       setFiles(fileTree);
-
-      // Auto-open default file if no file is currently active and files exist
-      if (!activeFile && fileTree.length > 0) {
-        // Look for main.py or main.html first
-        const defaultFiles = ['main.py', 'main.html'];
-        let fileToOpen = null;
-
-        for (const defaultFileName of defaultFiles) {
-          const foundFile = fileTree.find(file => file.name === defaultFileName && file.type === 'file');
-          if (foundFile) {
-            fileToOpen = foundFile;
-            break;
-          }
-        }
-
-        // If no main.py or main.html found, open the first non-test file
-        if (!fileToOpen) {
-          fileToOpen = fileTree.find(file => file.type === 'file' && file.name !== testFile);
-        }
-
-        // Open the selected file
-        if (fileToOpen) {
-          await openFile(fileToOpen.path, fileToOpen.name);
-        }
-      }
     } catch (err) {
       console.error('Error fetching files:', err);
       setError('Failed to load files');
@@ -207,6 +182,12 @@ export function FileSystemSidebar({ sessionId }: FileSystemSidebarProps) {
         setTimeout(() => setError(null), 750); // Clear error after 3 seconds
         return;
       }
+
+      // Force refresh the file list before opening to ensure we have the latest file data
+      if (activeFile?.name !== item.name) {
+        await fetchFiles();
+      }
+
       await openFile(item.path, item.name);
     }
   };
