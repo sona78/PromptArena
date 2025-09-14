@@ -283,81 +283,89 @@ export function EditorProvider({ children }: { children: ReactNode }) {
       const result = await response.json();
       setExecutionResult(result);
 
-      // After getting the modal response, evaluate the code with Claude
-      try {
-        const evaluationResponse = await fetch('/api/evaluate-code', {
+      // Run all three evaluations in parallel and wait for all to complete
+      const evaluationPromises = [];
+
+      // Code evaluation promise
+      const codeEvaluationPromise = fetch('/api/evaluate-code', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          files: files
+        }),
+      }).then(response => response.json()).catch(error => {
+        console.error('Code evaluation error:', error);
+        return { success: false };
+      });
+
+      // Prompt evaluation promise
+      const promptEvaluationPromise = (async () => {
+        try {
+          const { data: session, error: sessionError } = await supabase
+            .from('Sessions')
+            .select('prompts')
+            .eq('session_id', sessionId)
+            .single();
+
+          if (!sessionError && session?.prompts && session.prompts.length > 0) {
+            const response = await fetch('/api/evaluate-prompts', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                prompts: session.prompts
+              }),
+            });
+            return await response.json();
+          }
+          return { success: false };
+        } catch (error) {
+          console.error('Prompt evaluation error:', error);
+          return { success: false };
+        }
+      })();
+
+      // Accuracy evaluation promise
+      const executionText = result.success ? result.output : result.error;
+      const accuracyEvaluationPromise = executionText ? 
+        fetch('/api/evaluate-accuracy', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            files: files
+            output: executionText
           }),
-        });
+        }).then(response => response.json()).catch(error => {
+          console.error('Code accuracy evaluation error:', error);
+          return { success: false };
+        }) : Promise.resolve({ success: false });
 
-        const evaluationResult = await evaluationResponse.json();
-        if (evaluationResult.success && evaluationResult.evaluation) {
-          setCodeEvaluationScore(evaluationResult.evaluation.FinalScore);
-        }
-      } catch (evaluationError) {
-        console.error('Code evaluation error:', evaluationError);
-        // Don't fail the entire execution if evaluation fails
-      }
-
-      // After code evaluation, evaluate the prompt sequence
+      // Wait for all evaluations to complete
       try {
-        // Fetch prompt history from the database
-        const { data: session, error: sessionError } = await supabase
-          .from('Sessions')
-          .select('prompts')
-          .eq('session_id', sessionId)
-          .single();
+        const [codeEvaluationResult, promptEvaluationResult, accuracyEvaluationResult] = await Promise.all([
+          codeEvaluationPromise,
+          promptEvaluationPromise,
+          accuracyEvaluationPromise
+        ]);
 
-        if (!sessionError && session?.prompts && session.prompts.length > 0) {
-          const promptEvaluationResponse = await fetch('/api/evaluate-prompts', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              prompts: session.prompts
-            }),
-          });
-
-          const promptEvaluationResult = await promptEvaluationResponse.json();
-          if (promptEvaluationResult.success && promptEvaluationResult.evaluation) {
-            setPromptChainingScore(promptEvaluationResult.evaluation.PromptChainingScore);
-          }
+        // Set all scores at once after all evaluations are complete
+        if (codeEvaluationResult.success && codeEvaluationResult.evaluation) {
+          setCodeEvaluationScore(codeEvaluationResult.evaluation.FinalScore);
         }
-      } catch (promptEvaluationError) {
-        console.error('Prompt evaluation error:', promptEvaluationError);
-        // Don't fail the entire execution if prompt evaluation fails
-      }
 
-      // After prompt evaluation, evaluate code accuracy based on execution output
-      try {
-        // Use output if successful, otherwise use error message
-        const executionText = result.success ? result.output : result.error;
-        
-        if (executionText) {
-          const accuracyEvaluationResponse = await fetch('/api/evaluate-accuracy', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              output: executionText
-            }),
-          });
-
-          const accuracyEvaluationResult = await accuracyEvaluationResponse.json();
-          if (accuracyEvaluationResult.success && accuracyEvaluationResult.evaluation) {
-            setCodeAccuracyScore(accuracyEvaluationResult.evaluation.AccuracyScore);
-          }
+        if (promptEvaluationResult.success && promptEvaluationResult.evaluation) {
+          setPromptChainingScore(promptEvaluationResult.evaluation.PromptChainingScore);
         }
-      } catch (accuracyEvaluationError) {
-        console.error('Code accuracy evaluation error:', accuracyEvaluationError);
-        // Don't fail the entire execution if accuracy evaluation fails
+
+        if (accuracyEvaluationResult.success && accuracyEvaluationResult.evaluation) {
+          setCodeAccuracyScore(accuracyEvaluationResult.evaluation.AccuracyScore);
+        }
+      } catch (error) {
+        console.error('Error running evaluations:', error);
       }
     } catch (error) {
       setExecutionResult({
