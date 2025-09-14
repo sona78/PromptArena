@@ -52,8 +52,8 @@ export function InfiniteScrollContainer<T>({
     <div className="flex flex-col items-center justify-center p-8 text-gray-400">
       <div className="text-center">
         <AlertCircle className="w-12 h-12 mx-auto mb-4 text-gray-500" />
-        <h3 className="text-lg font-medium text-gray-300 mb-2">No items found</h3>
-        <p className="text-sm">There are no items to display at this time.</p>
+        <h3 className="text-lg font-display-serif font-bold text-[#28282D] mb-2">NO ITEMS FOUND</h3>
+        <p className="text-serif-sm text-[#79797C]">There are no items to display at this time.</p>
       </div>
     </div>
   );
@@ -62,15 +62,15 @@ export function InfiniteScrollContainer<T>({
     <div className="flex flex-col items-center justify-center p-8 text-gray-400">
       <div className="text-center">
         <AlertCircle className="w-12 h-12 mx-auto mb-4 text-red-500" />
-        <h3 className="text-lg font-medium text-gray-300 mb-2">Error loading data</h3>
-        <p className="text-sm mb-4">{errorMessage}</p>
+        <h3 className="text-lg font-display-serif font-bold text-[#28282D] mb-2">ERROR LOADING DATA</h3>
+        <p className="text-serif-sm text-[#79797C] mb-4">{errorMessage}</p>
         <Button
           variant="outline"
           onClick={retry}
-          className="text-gray-300 border-gray-600 hover:bg-gray-800"
+          className="text-[#28282D] border-[#28282D] hover:bg-[#28282D] hover:text-white font-display-serif font-bold tracking-wide text-sm"
         >
           <RefreshCw className="w-4 h-4 mr-2" />
-          Try Again
+          TRY AGAIN
         </Button>
       </div>
     </div>
@@ -79,7 +79,7 @@ export function InfiniteScrollContainer<T>({
   const defaultLoading = () => (
     <div className={`flex items-center justify-center p-4 ${loadingClassName}`}>
       <Loader2 className="w-5 h-5 animate-spin text-blue-400 mr-2" />
-      <span className="text-sm text-gray-400">Loading more...</span>
+      <span className="text-sm font-serif text-[#79797C]">Loading more...</span>
     </div>
   );
 

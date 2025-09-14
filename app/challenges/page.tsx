@@ -227,15 +227,15 @@ export default function DashboardPage() {
 
   const categories: CategoryConfig[] = [
     {
-      title: "FRONTEND",
-      icon: Monitor,
+      title: "BACKEND",
+      icon: Server,
       taskTypes: [0], // Frontend tasks
       searchPlaceholder: "Search frontend challenges...",
       iconColor: "#C5AECF"
     },
     {
-      title: "BACKEND", 
-      icon: Server,
+      title: "FRONTEND", 
+      icon: Monitor,
       taskTypes: [1], // Backend tasks
       searchPlaceholder: "Search backend challenges...",
       iconColor: "#46295A"

@@ -13,13 +13,13 @@ export default function Page() {
         <div className="flex flex-col gap-6">
           <Card>
             <CardHeader>
-              <CardTitle className="text-2xl">
-                Thank you for signing up!
+              <CardTitle className="text-section-header text-[#28282D]">
+                THANK YOU FOR SIGNING UP!
               </CardTitle>
-              <CardDescription>Check your email to confirm</CardDescription>
+              <CardDescription className="text-serif text-[#79797C]">Check your email to confirm</CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-serif-sm text-[#79797C]">
                 You&apos;ve successfully signed up. Please check your email to
                 confirm your account before signing in.
               </p>

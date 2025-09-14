@@ -4,8 +4,8 @@ import { JapandiLayout } from "@/components/japandi-layout";
 export default function Page() {
   return (
     <JapandiLayout 
-      title="Begin Your Journey" 
-      subtitle="Create your account and start exploring the art of thoughtful prompting."
+      title="Create Account" 
+      subtitle="Create your account to start using PromptArena."
       showNav={false}
       maxWidth="sm"
     >

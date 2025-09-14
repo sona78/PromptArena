@@ -5,7 +5,7 @@ export default function Page() {
   return (
     <JapandiLayout 
       title="Welcome Back" 
-      subtitle="Enter your credentials to continue your journey with mindful prompting."
+      subtitle="Enter your credentials to access your PromptArena account."
       showNav={false}
       maxWidth="sm"
     >
