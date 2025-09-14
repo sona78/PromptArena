@@ -15,7 +15,7 @@ export default function EditorPage() {
 
   return (
     <AuthGuard>
-      <div className="min-h-screen bg-stone-50 text-stone-800 flex flex-col font-light">
+      <div className="min-h-screen bg-white text-gray-900 flex flex-col">
         {/* Navigation Bar */}
         <Navigation />
 
@@ -24,18 +24,20 @@ export default function EditorPage() {
 
         {/* Main Content Area */}
         <EditorProvider>
-          <div className="flex-1 flex overflow-hidden">
+          <div className="flex-1 flex gap-4 p-4 max-w-7xl mx-auto w-full">
             {/* File System Sidebar */}
-            <FileSystemSidebar sessionId={sessionId || ''} />
+            <div className="w-64 flex-shrink-0">
+              <FileSystemSidebar sessionId={sessionId || ''} />
+            </div>
 
             {/* Monaco Code Editor */}
-            <div className="flex-1 border-r border-gray-800 min-h-0">
+            <div className="flex-1 min-w-0 bg-gray-50 border border-gray-200 rounded-lg overflow-hidden">
               <CodeEditor />
             </div>
 
             {/* Right Panel - Prompt Writing */}
-            <div className="w-96 flex flex-col">
-              <PromptPanel />
+            <div className="w-80 flex-shrink-0">
+              <PromptPanel sessionId={sessionId || ''} />
             </div>
           </div>
         </EditorProvider>

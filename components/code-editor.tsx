@@ -127,7 +127,7 @@ export function CodeEditor() {
           <Button
             variant="ghost"
             size="sm"
-            className="text-gray-400 hover:text-white hover:bg-gray-800"
+            className="monaco-text-muted hover:monaco-text hover:bg-secondary/50"
           >
             <Copy className="w-4 h-4" />
           </Button>
@@ -135,7 +135,7 @@ export function CodeEditor() {
           <Button
             variant="ghost"
             size="sm"
-            className="text-gray-400 hover:text-white hover:bg-gray-800"
+            className="monaco-text-muted hover:monaco-text hover:bg-secondary/50"
             onClick={handleReset}
             disabled={isLoading}
           >
@@ -170,7 +170,7 @@ export function CodeEditor() {
             defaultLanguage={activeFile ? getMonacoLanguage(activeFile.language) : 'plaintext'}
             value={code}
             onChange={(value) => setCode(value || '')}
-            theme="vs-dark"
+            theme="light"
             options={{
               minimap: { enabled: false },
               fontSize: 14,
