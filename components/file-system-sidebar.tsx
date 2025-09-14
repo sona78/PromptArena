@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Folder, File, ChevronRight, ChevronDown, Loader2, Plus, Trash2, MoreHorizontal } from 'lucide-react';
+import { Folder, File, ChevronRight, ChevronDown, Loader2, Plus, Trash2, MoreHorizontal, Lock, Shield } from 'lucide-react';
 import { useEditor } from './editor-context';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -32,11 +32,13 @@ export function FileSystemSidebar({ sessionId }: FileSystemSidebarProps) {
   const [creatingFile, setCreatingFile] = useState(false);
   const [newFileName, setNewFileName] = useState('');
   const [entryFile, setEntryFile] = useState<string>('');
-  const { openFile, activeFile, closeFile } = useEditor();
+  const [testFile, setTestFile] = useState<string>('');
+  const { openFile, activeFile, closeFile, codeEvaluationScore, promptChainingScore, codeAccuracyScore } = useEditor();
 
   useEffect(() => {
     if (sessionId) {
       fetchFiles();
+      fetchTaskFiles();
     }
   }, [sessionId]);
 
@@ -56,14 +58,29 @@ export function FileSystemSidebar({ sessionId }: FileSystemSidebarProps) {
       }
 
       // Build file tree structure
-      const fileTree = buildFileTree(data || []);
-      setFiles(fileTree);
+      let fileTree = buildFileTree(data || []);
 
-      // Detect entry file (main.py or first .py file, or any single file)
-      const pythonFiles = fileTree.filter(f => f.type === 'file' && f.name.endsWith('.py'));
-      const mainPy = pythonFiles.find(f => f.name === 'main.py');
-      const entryFileName = mainPy ? 'main.py' : (pythonFiles.length === 1 ? pythonFiles[0].name : fileTree.find(f => f.type === 'file')?.name || '');
-      setEntryFile(entryFileName);
+      // Only add test file to the file tree if it exists in storage and is not already in the list
+      if (testFile && !fileTree.some(f => f.name === testFile)) {
+        // Check if test file actually exists in storage
+        const { data: testFileData, error: testFileError } = await supabase.storage
+          .from('Sessions')
+          .list(sessionId, {
+            search: testFile
+          });
+
+        // Only add if the test file exists in storage
+        if (!testFileError && testFileData && testFileData.some(file => file.name === testFile)) {
+          fileTree.push({
+            name: testFile,
+            path: `${sessionId}/${testFile}`,
+            type: 'file',
+            isExpanded: false
+          });
+        }
+      }
+
+      setFiles(fileTree);
     } catch (err) {
       console.error('Error fetching files:', err);
       setError('Failed to load files');
@@ -71,6 +88,13 @@ export function FileSystemSidebar({ sessionId }: FileSystemSidebarProps) {
       setLoading(false);
     }
   };
+
+  // Refresh files when test file or entry file changes
+  useEffect(() => {
+    if ((testFile || entryFile) && sessionId) {
+      fetchFiles();
+    }
+  }, [testFile, entryFile]);
 
   const buildFileTree = (items: any[]): FileItem[] => {
     const tree: FileItem[] = [];
@@ -117,8 +141,52 @@ export function FileSystemSidebar({ sessionId }: FileSystemSidebarProps) {
     }
   };
 
+  const fetchTaskFiles = async () => {
+    try {
+      // First get the task_id from the session
+      const { data: session, error: sessionError } = await supabase
+        .from('Sessions')
+        .select('task_id')
+        .eq('session_id', sessionId)
+        .single();
+
+      if (sessionError) {
+        console.error('Error fetching session:', sessionError);
+        return;
+      }
+
+      // Then get the test_file and entry_file from the task
+      const { data: task, error: taskError } = await supabase
+        .from('Tasks')
+        .select('test_file, entry_file')
+        .eq('task_id', session.task_id)
+        .single();
+
+      if (taskError) {
+        console.error('Error fetching task:', taskError);
+        return;
+      }
+
+      if (task?.test_file) {
+        setTestFile(task.test_file);
+      }
+
+      if (task?.entry_file) {
+        setEntryFile(task.entry_file);
+      }
+    } catch (error) {
+      console.error('Error fetching task files:', error);
+    }
+  };
+
   const handleFileClick = async (item: FileItem) => {
     if (item.type === 'file') {
+      // Prevent opening the test file
+      if (item.name === testFile) {
+        setError('Test file is locked and cannot be edited');
+        setTimeout(() => setError(null), 750); // Clear error after 3 seconds
+        return;
+      }
       await openFile(item.path, item.name);
     }
   };
@@ -152,6 +220,11 @@ export function FileSystemSidebar({ sessionId }: FileSystemSidebarProps) {
   const deleteFile = async (fileName: string) => {
     if (fileName === entryFile) {
       setError('Cannot delete entry file');
+      return;
+    }
+
+    if (fileName === testFile) {
+      setError('Cannot delete test file');
       return;
     }
 
@@ -197,6 +270,8 @@ export function FileSystemSidebar({ sessionId }: FileSystemSidebarProps) {
     const paddingLeft = level * 16 + 8;
     const isActive = activeFile?.path === item.path;
     const isEntryFile = item.name === entryFile;
+    const isTestFile = item.name === testFile;
+    const isLocked = isEntryFile || isTestFile;
 
     return (
       <div key={`${item.path}-${index}`}>
@@ -222,16 +297,21 @@ export function FileSystemSidebar({ sessionId }: FileSystemSidebarProps) {
             ) : (
               <>
                 <div className="w-4 h-4 mr-1" />
-                <File className={`w-4 h-4 mr-2 ${isEntryFile ? 'text-green-400' : 'text-gray-400'}`} />
+                {isTestFile ? (
+                  <Lock className="w-4 h-4 mr-2 text-red-400" />
+                ) : (
+                  <File className={`w-4 h-4 mr-2 ${isEntryFile ? 'text-green-400' : 'text-gray-400'}`} />
+                )}
               </>
             )}
-            <span className={`truncate ${isActive ? 'text-blue-200 font-medium' : 'text-gray-200'}`}>
+            <span className={`truncate ${isActive ? 'text-blue-200 font-medium' : 'text-gray-200'} ${isTestFile ? 'opacity-75' : ''}`}>
               {item.name}
               {isEntryFile && <span className="text-xs text-green-400 ml-1">(entry)</span>}
+              {isTestFile && <span className="text-xs text-red-400 ml-1">(test - locked)</span>}
             </span>
           </div>
 
-          {item.type === 'file' && !isEntryFile && (
+          {item.type === 'file' && !isLocked && (
             <div className="opacity-0 group-hover:opacity-100 transition-opacity">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -333,6 +413,36 @@ export function FileSystemSidebar({ sessionId }: FileSystemSidebarProps) {
 
       {/* Actions */}
       <div className="p-2 border-t border-gray-800 space-y-2">
+        {/* Evaluation Scores */}
+        {(codeEvaluationScore !== null || promptChainingScore !== null || codeAccuracyScore !== null) && (
+          <div className="space-y-2">
+            {codeEvaluationScore !== null && (
+              <div className="bg-gray-800 border border-gray-700 rounded-md p-2 text-center">
+                <div className="text-xs text-gray-400 mb-1">Code Quality Score</div>
+                <div className="text-lg font-bold text-blue-400">
+                  {(codeEvaluationScore * 100).toFixed(0)}%
+                </div>
+              </div>
+            )}
+            {promptChainingScore !== null && (
+              <div className="bg-gray-800 border border-gray-700 rounded-md p-2 text-center">
+                <div className="text-xs text-gray-400 mb-1">Prompt Chaining Score</div>
+                <div className="text-lg font-bold text-green-400">
+                  {(promptChainingScore * 100).toFixed(0)}%
+                </div>
+              </div>
+            )}
+            {codeAccuracyScore !== null && (
+              <div className="bg-gray-800 border border-gray-700 rounded-md p-2 text-center">
+                <div className="text-xs text-gray-400 mb-1">Code Accuracy Score</div>
+                <div className="text-lg font-bold text-purple-400">
+                  {(codeAccuracyScore * 100).toFixed(0)}%
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+        
         <Button
           onClick={handleCreateFile}
           className="w-full text-xs bg-blue-600 hover:bg-blue-700 text-white"

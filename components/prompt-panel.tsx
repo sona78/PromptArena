@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -14,10 +14,15 @@ import {
   Star,
   Clock,
   History,
-  File
+  File,
+  Mic,
+  MicOff,
+  Loader2
 } from "lucide-react";
 import { useEditor } from "./editor-context";
-import { InfiniteScrollContainer } from "./infinite-scroll-container";
+import { supabase } from '@/lib/supabase';
+import { useVoiceRecording } from '@/hooks/use-voice-recording';
+import * as tokenizer from '@anthropic-ai/tokenizer';
 
 interface PromptPanelProps {
   sessionId: string;
@@ -26,13 +31,208 @@ interface PromptPanelProps {
 export function PromptPanel({ sessionId }: PromptPanelProps) {
   const [prompt, setPrompt] = useState('');
   const [activeTab, setActiveTab] = useState('write');
+  const [promptHistory, setPromptHistory] = useState<string[]>([]);
+  const [lastPromptTokenCount, setLastPromptTokenCount] = useState(0);
+  const [lastResponseTokenCount, setLastResponseTokenCount] = useState(0);
   const { code, setCode, isLoading, setIsLoading, promptQualityScore, setPromptQualityScore, promptMetrics, setPromptMetrics, activeFile } = useEditor();
+  
+  // Voice recording hook
+  const { 
+    isRecording, 
+    isTranscribing, 
+    startRecording, 
+    stopRecording, 
+    error: voiceError 
+  } = useVoiceRecording();
+
+  // Function to save prompt to database
+  const savePromptToDatabase = async (promptText: string) => {
+    if (!sessionId) return;
+
+    try {
+      // Get current session data
+      const { data: session, error: sessionError } = await supabase
+        .from('Sessions')
+        .select('prompts')
+        .eq('session_id', sessionId)
+        .single();
+
+      if (sessionError) {
+        console.error('Error fetching session:', sessionError);
+        return;
+      }
+
+      // Add new prompt to existing prompts array
+      const updatedPrompts = [...(session.prompts || []), promptText];
+
+      // Update session with new prompts array
+      const { error: updateError } = await supabase
+        .from('Sessions')
+        .update({ prompts: updatedPrompts })
+        .eq('session_id', sessionId);
+
+      if (updateError) {
+        console.error('Error updating prompts:', updateError);
+        return;
+      }
+
+      // Update local state
+      setPromptHistory(updatedPrompts);
+    } catch (error) {
+      console.error('Error saving prompt:', error);
+    }
+  };
+
+  // Function to save feedback (prompt metrics) to database
+  const saveFeedbackToDatabase = async (metrics: any, qualityScore: number) => {
+    if (!sessionId) return;
+
+    try {
+      // Get current session feedback
+      const { data: session, error: sessionError } = await supabase
+        .from('Sessions')
+        .select('feedback')
+        .eq('session_id', sessionId)
+        .single();
+
+      if (sessionError) {
+        console.error('Error fetching session feedback:', sessionError);
+        return;
+      }
+
+      // Create feedback entry
+      const feedbackEntry = {
+        timestamp: new Date().toISOString(),
+        type: 'prompt_analysis',
+        data: {
+          metrics: metrics,
+          qualityScore: qualityScore,
+          promptTokenCount: lastPromptTokenCount,
+          responseTokenCount: lastResponseTokenCount
+        }
+      };
+
+      // Add to existing feedback object
+      const currentFeedback = session?.feedback || {};
+      const feedbackKey = `analysis_${Date.now()}`;
+      const updatedFeedback = { ...currentFeedback, [feedbackKey]: feedbackEntry };
+
+      // Update session with new feedback
+      const { error: updateError } = await supabase
+        .from('Sessions')
+        .update({ feedback: updatedFeedback })
+        .eq('session_id', sessionId);
+
+      if (updateError) {
+        console.error('Error updating feedback:', updateError);
+        return;
+      }
+
+      console.log('Feedback saved successfully');
+    } catch (error) {
+      console.error('Error saving feedback:', error);
+    }
+  };
+
+  // Function to fetch prompt history
+  const fetchPromptHistory = async () => {
+    if (!sessionId) return;
+
+    try {
+      const { data: session, error } = await supabase
+        .from('Sessions')
+        .select('prompts')
+        .eq('session_id', sessionId)
+        .single();
+
+      if (error) {
+        console.error('Error fetching prompt history:', error);
+        return;
+      }
+
+      setPromptHistory(session.prompts || []);
+    } catch (error) {
+      console.error('Error fetching prompt history:', error);
+    }
+  };
+
+  // Function to fetch feedback data
+  const fetchFeedbackData = async () => {
+    if (!sessionId) return;
+
+    try {
+      const { data: session, error } = await supabase
+        .from('Sessions')
+        .select('feedback')
+        .eq('session_id', sessionId)
+        .single();
+
+      if (error) {
+        console.error('Error fetching feedback:', error);
+        return;
+      }
+
+      const feedback = session.feedback || {};
+
+      // Get the most recent prompt analysis feedback
+      const feedbackEntries = Object.values(feedback)
+        .filter((item: any) => item.type === 'prompt_analysis')
+        .sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      const recentAnalysis = feedbackEntries[0];
+
+      if (recentAnalysis && recentAnalysis.data) {
+        // Restore the metrics and scores from the most recent analysis
+        if (recentAnalysis.data.metrics) {
+          setPromptMetrics(recentAnalysis.data.metrics);
+        }
+        if (recentAnalysis.data.qualityScore) {
+          setPromptQualityScore(recentAnalysis.data.qualityScore);
+        }
+        if (recentAnalysis.data.promptTokenCount) {
+          setLastPromptTokenCount(recentAnalysis.data.promptTokenCount);
+        }
+        if (recentAnalysis.data.responseTokenCount) {
+          setLastResponseTokenCount(recentAnalysis.data.responseTokenCount);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching feedback:', error);
+    }
+  };
+
+  // Fetch prompt history and feedback data on component mount
+  useEffect(() => {
+    fetchPromptHistory();
+    fetchFeedbackData();
+  }, [sessionId]);
+
+  // Calculate token count using Anthropic tokenizer
+  const tokenCount = useMemo(() => {
+    // Simple estimation: 1 token ≈ 4 characters for English text
+    return Math.ceil(prompt.length / 4);
+  }, [prompt]);
+
+  // Handle voice recording toggle
+  const handleVoiceToggle = async () => {
+    if (isRecording) {
+      const transcribedText = await stopRecording();
+      if (transcribedText) {
+        setPrompt(prev => prev + (prev ? ' ' : '') + transcribedText);
+      }
+    } else {
+      await startRecording();
+    }
+  };
 
 
   const handleSubmit = async () => {
     if (!prompt.trim()) {
       return;
     }
+
+    // Store the token count of the submitted prompt using simple estimation
+    const submittedTokenCount = Math.ceil(prompt.length / 4);
+    setLastPromptTokenCount(submittedTokenCount);
 
     setIsLoading(true);
 
@@ -140,9 +340,16 @@ Return only the complete code, no explanations.`;
         cleanedCode = cleanedCode.replace(/^```\w*\n?/gm, '');
         cleanedCode = cleanedCode.replace(/\n?```$/gm, '');
 
+        // Count tokens in Claude's response using simple estimation
+        const responseTokenCount = Math.ceil(cleanedCode.length / 4);
+        setLastResponseTokenCount(responseTokenCount);
+
         // Update the editor with cleaned response
         // This will trigger the auto-save system if there's an active file
         setCode(cleanedCode.trim());
+
+        // Save prompt to database
+        await savePromptToDatabase(prompt);
 
         // Clear the prompt after successful submission
         setPrompt('');
@@ -155,7 +362,9 @@ Return only the complete code, no explanations.`;
 **Original Prompt:**
 ${prompt}
 
-Please try again or check your configuration.`);
+
+
+zPlease try again or check your configuration.`);
       }
 
       // Handle evaluation response
@@ -172,10 +381,12 @@ Please try again or check your configuration.`);
             setPromptMetrics(evaluation);
 
             // Set the final score
+            let finalScore = 0;
             if (
               Object.prototype.hasOwnProperty.call(evaluation, 'final score') &&
               typeof evaluation['final score'] === 'number'
             ) {
+<<<<<<< HEAD
               const finalScore = evaluation['final score'];
               setPromptQualityScore(finalScore);
               
@@ -199,7 +410,14 @@ Please try again or check your configuration.`);
                   console.error('Failed to save submission:', error);
                 }
               }
+=======
+              finalScore = evaluation['final score'];
+              setPromptQualityScore(finalScore);
+>>>>>>> 2f1154b4778ee3f1716bdadaaac3d274de412e57
             }
+
+            // Save feedback to database
+            await saveFeedbackToDatabase(evaluation, finalScore);
           } else {
             // Fallback: try to extract just the number after "final score"
             const scoreMatch = content.match(/"final score":\s*(\d+(?:\.\d+)?)/);
@@ -246,34 +464,9 @@ Please try again or check your configuration.`);
     }
   };
 
-  // Mock data fetcher for prompt history
-  const fetchPromptHistory = async (page: number, limit: number) => {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 800));
-
-    // Mock data - in real app, this would fetch from Supabase
-    const allPrompts = Array.from({ length: 100 }, (_, i) => ({
-      id: i + 1,
-      prompt: `Example prompt ${i + 1}: Write a creative story about ${['dragons', 'robots', 'magic', 'space', 'time travel'][i % 5]}`,
-      score: Math.floor(Math.random() * 100) + 1,
-      timestamp: new Date(Date.now() - i * 1000 * 60 * 60),
-      status: ['pending', 'completed', 'failed'][i % 3]
-    }));
-
-    const startIndex = (page - 1) * limit;
-    const endIndex = startIndex + limit;
-    const pageData = allPrompts.slice(startIndex, endIndex);
-
-    return {
-      data: pageData,
-      hasMore: endIndex < allPrompts.length,
-      nextPage: page + 1
-    };
-  };
 
   const tabs = [
     { id: 'write', label: 'Write Prompt', icon: MessageSquare },
-    { id: 'history', label: 'History', icon: History },
     { id: 'analyze', label: 'Analysis', icon: Brain },
   ];
 
@@ -310,9 +503,33 @@ Please try again or check your configuration.`);
           <div className="p-4 space-y-4">
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <label className="text-sm font-medium text-gray-300">
-                  Your Prompt
-                </label>
+                <div className="flex items-center space-x-2">
+                  <label className="text-sm font-medium text-gray-300">
+                    Your Prompt
+                  </label>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={`h-6 w-6 p-0 transition-colors ${
+                      isRecording 
+                        ? 'text-red-400 hover:text-red-300' 
+                        : isTranscribing
+                        ? 'text-blue-400'
+                        : 'text-gray-400 hover:text-gray-300'
+                    }`}
+                    onClick={handleVoiceToggle}
+                    disabled={isTranscribing || isLoading}
+                    title={isRecording ? 'Stop recording' : isTranscribing ? 'Transcribing...' : 'Start voice recording'}
+                  >
+                    {isTranscribing ? (
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                    ) : isRecording ? (
+                      <MicOff className="w-3 h-3" />
+                    ) : (
+                      <Mic className="w-3 h-3" />
+                    )}
+                  </Button>
+                </div>
                 {activeFile && (
                   <div className="flex items-center space-x-1 text-xs text-gray-400">
                     <File className="w-3 h-3" />
@@ -331,27 +548,30 @@ Please try again or check your configuration.`);
                 className="min-h-32 bg-gray-900 border-gray-700 text-gray-100 resize-none focus:border-blue-500"
                 disabled={isLoading}
               />
-              <div className="text-xs text-gray-500">
-                {prompt.length}/500 characters
+              <div className="flex items-center justify-between">
+                <div className="text-xs text-blue-400 font-medium">
+                  {tokenCount} tokens
+                </div>
+                {voiceError && (
+                  <div className="text-xs text-red-400">
+                    {voiceError}
+                  </div>
+                )}
+                {isRecording && (
+                  <div className="flex items-center space-x-1 text-xs text-red-400">
+                    <div className="w-2 h-2 bg-red-400 rounded-full animate-pulse" />
+                    <span>Recording...</span>
+                  </div>
+                )}
+                {isTranscribing && (
+                  <div className="flex items-center space-x-1 text-xs text-blue-400">
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    <span>Transcribing...</span>
+                  </div>
+                )}
               </div>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-300">
-                Prompt Style
-              </label>
-              <div className="flex flex-wrap gap-2">
-                {['Creative', 'Structured', 'Open-ended', 'Detailed'].map((style) => (
-                  <Badge
-                    key={style}
-                    variant="outline"
-                    className="cursor-pointer border-gray-600 text-gray-400 hover:border-blue-500 hover:text-blue-400"
-                  >
-                    {style}
-                  </Badge>
-                ))}
-              </div>
-            </div>
 
             <Button
               className="w-full bg-blue-600 hover:bg-blue-700 text-white"
@@ -366,6 +586,28 @@ Please try again or check your configuration.`);
                   : 'Generate Code'
               }
             </Button>
+
+            {promptHistory.length > 0 && (
+              <div className="pt-4 border-t border-gray-800">
+                <h3 className="text-sm font-medium text-gray-300 mb-2 flex items-center">
+                  <History className="w-4 h-4 mr-1 text-blue-400" />
+                  Recent Prompts ({promptHistory.length})
+                </h3>
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {promptHistory.slice(-3).reverse().map((historyPrompt, index) => (
+                    <div
+                      key={index}
+                      className="bg-gray-900 border border-gray-700 rounded p-2 cursor-pointer hover:bg-gray-800 transition-colors"
+                      onClick={() => setPrompt(historyPrompt)}
+                    >
+                      <p className="text-xs text-gray-300 line-clamp-2">
+                        {historyPrompt}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="pt-4 border-t border-gray-800">
               <h3 className="text-sm font-medium text-gray-300 mb-2 flex items-center">
@@ -382,61 +624,47 @@ Please try again or check your configuration.`);
           </div>
         )}
 
-        {activeTab === 'history' && (
-          <div className="flex-1 overflow-hidden">
-            <InfiniteScrollContainer
-              fetchData={fetchPromptHistory}
-              renderItem={(item: any) => (
-                <Card className="bg-gray-900 border-gray-700 p-3 mx-4 mb-2">
-                  <div className="space-y-2">
-                    <div className="flex items-start justify-between">
-                      <p className="text-sm text-gray-300 flex-1 pr-2">
-                        {item.prompt}
-                      </p>
-                      <Badge
-                        variant="outline"
-                        className={`text-xs ${
-                          item.status === 'completed'
-                            ? 'border-green-600 text-green-400'
-                            : item.status === 'pending'
-                            ? 'border-yellow-600 text-yellow-400'
-                            : 'border-red-600 text-red-400'
-                        }`}
-                      >
-                        {item.status}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center justify-between text-xs text-gray-500">
-                      <div className="flex items-center space-x-2">
-                        <Clock className="w-3 h-3" />
-                        <span>{item.timestamp.toLocaleString()}</span>
-                      </div>
-                      {item.status === 'completed' && (
-                        <div className="flex items-center space-x-1">
-                          <Star className="w-3 h-3 text-yellow-400" />
-                          <span>{item.score}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </Card>
-              )}
-              renderEmpty={() => (
-                <div className="flex flex-col items-center justify-center h-full p-8 text-gray-400">
-                  <History className="w-12 h-12 mb-4 text-gray-600" />
-                  <h3 className="text-lg font-medium text-gray-300 mb-2">No prompt history</h3>
-                  <p className="text-sm text-center">Your submitted prompts will appear here</p>
-                </div>
-              )}
-              limit={10}
-              threshold={50}
-              className="h-full"
-            />
-          </div>
-        )}
 
         {activeTab === 'analyze' && (
           <div className="p-4 space-y-4">
+            <Card className="bg-gray-900 border-gray-700 p-3">
+              <h3 className="text-sm font-medium text-gray-300 mb-2">
+                Token Counts
+              </h3>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <span className="text-sm text-gray-400">Prompt:</span>
+                    <div className="text-lg font-bold text-blue-400">
+                      {lastPromptTokenCount}
+                    </div>
+                    <span className="text-xs text-gray-500">tokens</span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <span className="text-sm text-gray-400">Response:</span>
+                    <div className="text-lg font-bold text-green-400">
+                      {lastResponseTokenCount}
+                    </div>
+                    <span className="text-xs text-gray-500">tokens</span>
+                  </div>
+                </div>
+                <div className="pt-2 border-t border-gray-700">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-400">Total:</span>
+                    <div className="text-lg font-bold text-purple-400">
+                      {lastPromptTokenCount + lastResponseTokenCount}
+                    </div>
+                    <span className="text-xs text-gray-500">tokens</span>
+                  </div>
+                </div>
+              </div>
+              <div className="text-xs text-gray-500 mt-2">
+                {lastPromptTokenCount > 0 ? 'From last submitted prompt and response' : 'No prompts submitted yet'}
+              </div>
+            </Card>
+
             <Card className="bg-gray-900 border-gray-700 p-3">
               <h3 className="text-sm font-medium text-gray-300 mb-2">
                 Prompt Quality Score
