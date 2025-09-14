@@ -4,12 +4,25 @@ import { useState, useEffect } from 'react';
 import { Editor } from '@monaco-editor/react';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Play, RotateCcw, Copy, FileText } from "lucide-react";
+import { Play, RotateCcw, Copy, FileText, Save } from "lucide-react";
 import { useEditor } from "./editor-context";
 import { ResultsPanel } from "./results-panel";
 
 export function CodeEditor() {
-  const { code, setCode, language, isLoading, executionResult, setExecutionResult, isExecuting, setIsExecuting } = useEditor();
+  const {
+    code,
+    setCode,
+    language,
+    activeFile,
+    saveFile,
+    isLoading,
+    executionResult,
+    setExecutionResult,
+    isExecuting,
+    setIsExecuting,
+    isSaving,
+    hasUnsavedChanges
+  } = useEditor();
 
   const handleRun = async () => {
     setIsExecuting(true);
@@ -40,31 +53,25 @@ export function CodeEditor() {
     }
   };
 
-  const getDefaultCode = (lang: 'javascript' | 'python') => {
-    if (lang === 'javascript') {
-      return `// Hello World in JavaScript
-console.log('Hello, World!');
-
-// Example function
-function greet(name) {
-  return \`Hello, \${name}!\`;
-}
-
-console.log(greet('JavaScript'));`;
+  const handleReset = () => {
+    if (activeFile) {
+      setCode(activeFile.content);
     } else {
-      return `# Hello World in Python
-print('Hello, World!')
-
-# Example function
-def greet(name):
-    return f'Hello, {name}!'
-
-print(greet('Python'))`;
+      setCode('');
     }
   };
 
-  const handleReset = () => {
-    setCode(getDefaultCode(language));
+  const getMonacoLanguage = (lang: string) => {
+    switch (lang) {
+      case 'javascript':
+        return 'javascript';
+      case 'python':
+        return 'python';
+      case 'text':
+        return 'plaintext';
+      default:
+        return 'plaintext';
+    }
   };
 
   return (
@@ -75,22 +82,48 @@ print(greet('Python'))`;
           <div className="flex items-center space-x-2">
             <FileText className="w-4 h-4 text-gray-400" />
             <span className="text-sm font-medium text-gray-300">
-              {language === 'javascript' ? 'code.js' : 'code.py'}
+              {activeFile ? activeFile.name : 'No file selected'}
             </span>
+            {hasUnsavedChanges && !isSaving && (
+              <span className="text-xs text-orange-400" title="Unsaved changes">•</span>
+            )}
+            {isSaving && (
+              <span className="text-xs text-blue-400 animate-pulse" title="Auto-saving...">💾</span>
+            )}
           </div>
 
-          <Badge variant="outline" className="text-xs border-gray-600 text-gray-400">
-            {language === 'javascript' ? 'JavaScript' : 'Python'}
-          </Badge>
+          {activeFile && (
+            <Badge variant="outline" className="text-xs border-gray-600 text-gray-400">
+              {activeFile.language.toUpperCase()}
+            </Badge>
+          )}
 
           {isLoading && (
             <Badge className="bg-blue-900 text-blue-200 text-xs animate-pulse">
               Generating...
             </Badge>
           )}
+
+          {isSaving && (
+            <Badge className="bg-green-900 text-green-200 text-xs animate-pulse">
+              Auto-saving...
+            </Badge>
+          )}
         </div>
 
         <div className="flex items-center space-x-2">
+          {activeFile && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-gray-400 hover:text-white hover:bg-gray-800"
+              onClick={() => saveFile()}
+              disabled={isLoading || isSaving || !hasUnsavedChanges}
+            >
+              <Save className="w-4 h-4" />
+            </Button>
+          )}
+
           <Button
             variant="ghost"
             size="sm"
@@ -123,31 +156,41 @@ print(greet('Python'))`;
 
       {/* Monaco Editor */}
       <div className="flex-1 min-h-0 overflow-hidden">
-        <Editor
-          height="100%"
-          defaultLanguage={language}
-          value={code}
-          onChange={(value) => setCode(value || '')}
-          theme="vs-dark"
-          options={{
-            minimap: { enabled: false },
-            fontSize: 14,
-            lineNumbers: 'on',
-            scrollBeyondLastLine: false,
-            automaticLayout: true,
-            tabSize: 2,
-            wordWrap: 'on',
-            padding: { top: 16, bottom: 16 },
-            fontFamily: 'JetBrains Mono, Consolas, Monaco, monospace',
-            renderLineHighlight: 'gutter',
-            selectOnLineNumbers: true,
-            matchBrackets: 'always',
-            autoIndent: 'full',
-            formatOnPaste: true,
-            formatOnType: true,
-            readOnly: isLoading,
-          }}
-        />
+        {!activeFile && !code ? (
+          <div className="h-full flex items-center justify-center">
+            <div className="text-center text-gray-500">
+              <FileText className="w-16 h-16 mx-auto mb-4 text-gray-600" />
+              <h3 className="text-lg font-medium text-gray-400 mb-2">No file selected</h3>
+              <p className="text-sm">Select a file from the sidebar to start editing</p>
+            </div>
+          </div>
+        ) : (
+          <Editor
+            height="100%"
+            defaultLanguage={activeFile ? getMonacoLanguage(activeFile.language) : 'plaintext'}
+            value={code}
+            onChange={(value) => setCode(value || '')}
+            theme="vs-dark"
+            options={{
+              minimap: { enabled: false },
+              fontSize: 14,
+              lineNumbers: 'on',
+              scrollBeyondLastLine: false,
+              automaticLayout: true,
+              tabSize: 2,
+              wordWrap: 'on',
+              padding: { top: 16, bottom: 16 },
+              fontFamily: 'JetBrains Mono, Consolas, Monaco, monospace',
+              renderLineHighlight: 'gutter',
+              selectOnLineNumbers: true,
+              matchBrackets: 'always',
+              autoIndent: 'full',
+              formatOnPaste: true,
+              formatOnType: true,
+              readOnly: isLoading,
+            }}
+          />
+        )}
       </div>
 
       {/* Status Bar */}
@@ -159,9 +202,11 @@ print(greet('Python'))`;
         </div>
 
         <div className="flex items-center space-x-2">
-          <Badge className="bg-gray-800 text-gray-300 text-xs">
-            {language === 'javascript' ? 'JavaScript' : 'Python'}
-          </Badge>
+          {activeFile && (
+            <Badge className="bg-gray-800 text-gray-300 text-xs">
+              {activeFile.language.charAt(0).toUpperCase() + activeFile.language.slice(1)}
+            </Badge>
+          )}
         </div>
       </div>
 

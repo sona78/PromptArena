@@ -14,7 +14,8 @@ import {
   Users,
   Star,
   Clock,
-  History
+  History,
+  File
 } from "lucide-react";
 import { useEditor } from "./editor-context";
 import { InfiniteScrollContainer } from "./infinite-scroll-container";
@@ -22,7 +23,7 @@ import { InfiniteScrollContainer } from "./infinite-scroll-container";
 export function PromptPanel() {
   const [prompt, setPrompt] = useState('');
   const [activeTab, setActiveTab] = useState('write');
-  const { code, setCode, isLoading, setIsLoading } = useEditor();
+  const { code, setCode, isLoading, setIsLoading, activeFile } = useEditor();
 
   const handleSubmit = async () => {
     if (!prompt.trim()) {
@@ -31,14 +32,23 @@ export function PromptPanel() {
 
     setIsLoading(true);
     
-    const finalPrompt = `Modify the following code according to this request: ${prompt}
+    // Create context-aware prompt based on whether we have an active file
+    let finalPrompt;
+    if (activeFile) {
+      finalPrompt = `Modify the file "${activeFile.name}" according to this request: ${prompt}
 
 Return only the complete updated code, no explanations.
 
-Current code:
-\`\`\`
+Current file content:
+\`\`\`${activeFile.language}
 ${code}
 \`\`\``;
+    } else {
+      finalPrompt = `Create code according to this request: ${prompt}
+
+Return only the complete code, no explanations.`;
+    }
+
     try {
       const response = await fetch('/api/claude', {
         method: 'POST',
@@ -59,28 +69,26 @@ ${code}
         cleanedCode = cleanedCode.replace(/\n?```$/gm, '');
         
         // Update the editor with cleaned response
+        // This will trigger the auto-save system if there's an active file
         setCode(cleanedCode.trim());
+
+        // Clear the prompt after successful submission
+        setPrompt('');
       } else {
         // Handle error - show in editor
-        setCode(`# Error calling Claude API
+        const errorMessage = activeFile
+          ? `# Error calling Claude API for ${activeFile.name}\n\n**Error:** ${data.error}\n\n**Original Prompt:**\n${prompt}\n\nPlease try again or check your configuration.`
+          : `# Error calling Claude API\n\n**Error:** ${data.error}\n\n**Original Prompt:**\n${prompt}\n\nPlease try again or check your configuration.`;
 
-**Error:** ${data.error}
-
-**Original Prompt:**
-${prompt}
-
-Please try again or check your configuration.`);
+        setCode(errorMessage);
       }
     } catch (error) {
       // Handle network error
-      setCode(`# Network Error
+      const errorMessage = activeFile
+        ? `# Network Error for ${activeFile.name}\n\n**Error:** Failed to connect to Claude API\n\n**Original Prompt:**\n${prompt}\n\nPlease check your internet connection and try again.`
+        : `# Network Error\n\n**Error:** Failed to connect to Claude API\n\n**Original Prompt:**\n${prompt}\n\nPlease check your internet connection and try again.`;
 
-**Error:** Failed to connect to Claude API
-
-**Original Prompt:**
-${prompt}
-
-Please check your internet connection and try again.`);
+      setCode(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -203,11 +211,23 @@ Please check your internet connection and try again.`);
         {activeTab === 'write' && (
           <div className="p-4 space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-300">
-                Your Prompt
-              </label>
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium text-gray-300">
+                  Your Prompt
+                </label>
+                {activeFile && (
+                  <div className="flex items-center space-x-1 text-xs text-gray-400">
+                    <File className="w-3 h-3" />
+                    <span>Editing: {activeFile.name}</span>
+                  </div>
+                )}
+              </div>
               <Textarea
-                placeholder="Write your creative writing prompt here. Be specific, engaging, and unique..."
+                placeholder={
+                  activeFile
+                    ? `Describe how you want to modify "${activeFile.name}"...`
+                    : "Describe what code you want to generate..."
+                }
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 className="min-h-32 bg-gray-900 border-gray-700 text-gray-100 resize-none focus:border-blue-500"
@@ -235,13 +255,18 @@ Please check your internet connection and try again.`);
               </div>
             </div>
 
-            <Button 
+            <Button
               className="w-full bg-blue-600 hover:bg-blue-700 text-white"
               onClick={handleSubmit}
               disabled={isLoading || !prompt.trim()}
             >
               <Send className="w-4 h-4 mr-2" />
-              {isLoading ? 'Calling Claude...' : 'Submit Prompt'}
+              {isLoading
+                ? 'Calling Claude...'
+                : activeFile
+                  ? `Modify ${activeFile.name}`
+                  : 'Generate Code'
+              }
             </Button>
 
             <div className="pt-4 border-t border-gray-800">

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Folder, File, ChevronRight, ChevronDown, Loader2 } from 'lucide-react';
+import { useEditor } from './editor-context';
 
 interface FileItem {
   name: string;
@@ -20,6 +21,7 @@ export function FileSystemSidebar({ sessionId }: FileSystemSidebarProps) {
   const [files, setFiles] = useState<FileItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { openFile, activeFile } = useEditor();
 
   useEffect(() => {
     if (sessionId) {
@@ -98,15 +100,24 @@ export function FileSystemSidebar({ sessionId }: FileSystemSidebarProps) {
     }
   };
 
+  const handleFileClick = async (item: FileItem) => {
+    if (item.type === 'file') {
+      await openFile(item.path, item.name);
+    }
+  };
+
   const renderFileItem = (item: FileItem, index: number, level = 0) => {
     const paddingLeft = level * 16 + 8;
+    const isActive = activeFile?.path === item.path;
 
     return (
       <div key={`${item.path}-${index}`}>
         <div
-          className="flex items-center py-1 px-2 hover:bg-gray-800 cursor-pointer text-sm"
+          className={`flex items-center py-1 px-2 hover:bg-gray-800 cursor-pointer text-sm ${
+            isActive ? 'bg-blue-900/50 border-r-2 border-blue-500' : ''
+          }`}
           style={{ paddingLeft: `${paddingLeft}px` }}
-          onClick={() => item.type === 'folder' ? toggleFolder(index) : undefined}
+          onClick={() => item.type === 'folder' ? toggleFolder(index) : handleFileClick(item)}
         >
           {item.type === 'folder' ? (
             <>
@@ -123,7 +134,9 @@ export function FileSystemSidebar({ sessionId }: FileSystemSidebarProps) {
               <File className="w-4 h-4 mr-2 text-gray-400" />
             </>
           )}
-          <span className="text-gray-200 truncate">{item.name}</span>
+          <span className={`truncate ${isActive ? 'text-blue-200 font-medium' : 'text-gray-200'}`}>
+            {item.name}
+          </span>
         </div>
 
         {item.type === 'folder' && item.isExpanded && item.children && (
