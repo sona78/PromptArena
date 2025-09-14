@@ -23,7 +23,7 @@ import { InfiniteScrollContainer } from "./infinite-scroll-container";
 export function PromptPanel() {
   const [prompt, setPrompt] = useState('');
   const [activeTab, setActiveTab] = useState('write');
-  const { code, setCode, isLoading, setIsLoading, activeFile } = useEditor();
+  const { code, setCode, isLoading, setIsLoading, promptQualityScore, setPromptQualityScore, promptMetrics, setPromptMetrics, activeFile } = useEditor();
 
   const handleSubmit = async () => {
     if (!prompt.trim()) {
@@ -31,7 +31,7 @@ export function PromptPanel() {
     }
 
     setIsLoading(true);
-    
+
     // Create context-aware prompt based on whether we have an active file
     let finalPrompt;
     if (activeFile) {
@@ -44,30 +44,98 @@ Current file content:
 ${code}
 \`\`\``;
     } else {
-      finalPrompt = `Create code according to this request: ${prompt}
+      // Fix: add logic for when there is no active file
+      finalPrompt = `Write code according to this request: ${prompt}
 
 Return only the complete code, no explanations.`;
     }
 
+    const evaluationPrompt = `You are a prompt evaluation assistant. Given a user-supplied prompt (the “query”), you will evaluate its effectiveness according to the following metrics (derived from the Anthropic Prompt Engineering guidelines):
+
+        1. Clarity & Directness — Is the prompt clear, unambiguous, and direct about what is asked?
+        2. Role Definition / System Context — Does the prompt give you a role or system context (e.g. “You are …”) so you understand how to respond?
+        3. Specificity / Constraints — Does the prompt include specific constraints (format, tone, length, domain, audience, etc.)?
+        4. Use of Examples or Few-Shot Guidance — Does it use examples to illustrate what is wanted or show style/format?
+        5. Chain of Thought / Reasoning Encouragement — Does it ask the model to think step by step or explain reasoning when needed?
+        6. Prefilling / Preface / Structured Tags — Are there structured tags or prefilling that help guide response structure?
+        7. Conciseness / Avoiding Redundancy — Is the prompt free from unnecessary words or confusing redundancy?
+        8. Suitability of Tone / Audience — Is the tone and style appropriate for the target audience and use case?
+        9. Success Criteria / Eval Metrics — Does the prompt define success criteria or what “good” looks like?
+
+        ---
+
+        Task:
+
+        Given the user prompt below, evaluate it on each metric giving it a score out of 10.
+        Then average the scores to get a final score out of 10.
+        Return the final score in a json format. It should have 10 keys, one for each metric and the last as a final score.
+        Your response should be in the following format:
+        {
+            "clarity": 10,
+            "role definition": 10,
+            "specificity": 10,
+            "use of examples": 10,
+            "chain of thought": 10,
+            "prefilling": 10,
+            "conciseness": 10,
+            "suitability of tone": 10,
+            "success criteria": 10
+            "final score": 10,
+        }
+
+        EXAMPLE:
+        User Prompt: "Write a prompt that generates a story about a dog."
+        Response:
+        {
+            "clarity": 5,
+            "role definition": 6,
+            "specificity": 4,
+            "use of examples": 0,
+            "chain of thought": 8,
+            "prefilling": 5,
+            "conciseness": 10,
+            "suitability of tone": 3,
+            "success criteria": 4,
+            "final score": 5.5,
+        }
+
+        ---
+
+        User Prompt: ${prompt}`;
+
     try {
-      const response = await fetch('/api/claude', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ prompt: finalPrompt }),
-      });
+      // Run both the code modification and prompt evaluation in parallel
+      const [codeResponse, evaluationResponse] = await Promise.all([
+        fetch('/api/claude', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ prompt: finalPrompt }),
+        }),
+        fetch('/api/claude', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ prompt: evaluationPrompt }),
+        })
+      ]);
 
-      const data = await response.json();
+      const [codeData, evaluationData] = await Promise.all([
+        codeResponse.json(),
+        evaluationResponse.json()
+      ]);
 
-      if (data.success) {
+      // Handle code modification response
+      if (codeData.success) {
         // Strip markdown code blocks from Claude's response
-        let cleanedCode = data.content;
-        
+        let cleanedCode = codeData.content;
+
         // Remove code block markers (```python, ```javascript, etc.)
         cleanedCode = cleanedCode.replace(/^```\w*\n?/gm, '');
         cleanedCode = cleanedCode.replace(/\n?```$/gm, '');
-        
+
         // Update the editor with cleaned response
         // This will trigger the auto-save system if there's an active file
         setCode(cleanedCode.trim());
@@ -76,11 +144,48 @@ Return only the complete code, no explanations.`;
         setPrompt('');
       } else {
         // Handle error - show in editor
-        const errorMessage = activeFile
-          ? `# Error calling Claude API for ${activeFile.name}\n\n**Error:** ${data.error}\n\n**Original Prompt:**\n${prompt}\n\nPlease try again or check your configuration.`
-          : `# Error calling Claude API\n\n**Error:** ${data.error}\n\n**Original Prompt:**\n${prompt}\n\nPlease try again or check your configuration.`;
+        setCode(`# Error calling Claude API
 
-        setCode(errorMessage);
+**Error:** ${codeData.error}
+
+**Original Prompt:**
+${prompt}
+
+Please try again or check your configuration.`);
+      }
+
+      // Handle evaluation response
+      if (evaluationData.success) {
+        try {
+          // Extract JSON from Claude's response (it might have extra text)
+          const content = evaluationData.content;
+          const jsonMatch = content.match(/\{[\s\S]*?\}/);
+
+          if (jsonMatch) {
+            const evaluation = JSON.parse(jsonMatch[0]);
+
+            // Store all metrics
+            setPromptMetrics(evaluation);
+
+            // Set the final score
+            if (
+              Object.prototype.hasOwnProperty.call(evaluation, 'final score') &&
+              typeof evaluation['final score'] === 'number'
+            ) {
+              setPromptQualityScore(evaluation['final score']);
+            }
+          } else {
+            // Fallback: try to extract just the number after "final score"
+            const scoreMatch = content.match(/"final score":\s*(\d+(?:\.\d+)?)/);
+            if (scoreMatch) {
+              const score = parseFloat(scoreMatch[1]);
+              setPromptQualityScore(score);
+            }
+          }
+        } catch (parseError) {
+          console.error('Failed to parse evaluation response:', parseError);
+          console.log('Raw response:', evaluationData.content);
+        }
       }
     } catch (error) {
       // Handle network error
@@ -155,59 +260,6 @@ Return only the complete code, no explanations.`;
 
       {/* Tab Content */}
       <div className="flex-1 overflow-y-auto">
-        {activeTab === 'history' && (
-          <div className="flex-1 overflow-hidden">
-            <InfiniteScrollContainer
-              fetchData={fetchPromptHistory}
-              renderItem={(item: any) => (
-                <Card className="bg-gray-900 border-gray-700 p-3 mx-4 mb-2">
-                  <div className="space-y-2">
-                    <div className="flex items-start justify-between">
-                      <p className="text-sm text-gray-300 flex-1 pr-2">
-                        {item.prompt}
-                      </p>
-                      <Badge
-                        variant="outline"
-                        className={`text-xs ${
-                          item.status === 'completed'
-                            ? 'border-green-600 text-green-400'
-                            : item.status === 'pending'
-                            ? 'border-yellow-600 text-yellow-400'
-                            : 'border-red-600 text-red-400'
-                        }`}
-                      >
-                        {item.status}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center justify-between text-xs text-gray-500">
-                      <div className="flex items-center space-x-2">
-                        <Clock className="w-3 h-3" />
-                        <span>{item.timestamp.toLocaleString()}</span>
-                      </div>
-                      {item.status === 'completed' && (
-                        <div className="flex items-center space-x-1">
-                          <Star className="w-3 h-3 text-yellow-400" />
-                          <span>{item.score}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </Card>
-              )}
-              renderEmpty={() => (
-                <div className="flex flex-col items-center justify-center h-full p-8 text-gray-400">
-                  <History className="w-12 h-12 mb-4 text-gray-600" />
-                  <h3 className="text-lg font-medium text-gray-300 mb-2">No prompt history</h3>
-                  <p className="text-sm text-center">Your submitted prompts will appear here</p>
-                </div>
-              )}
-              limit={10}
-              threshold={50}
-              className="h-full"
-            />
-          </div>
-        )}
-
         {activeTab === 'write' && (
           <div className="p-4 space-y-4">
             <div className="space-y-2">
@@ -284,6 +336,59 @@ Return only the complete code, no explanations.`;
           </div>
         )}
 
+        {activeTab === 'history' && (
+          <div className="flex-1 overflow-hidden">
+            <InfiniteScrollContainer
+              fetchData={fetchPromptHistory}
+              renderItem={(item: any) => (
+                <Card className="bg-gray-900 border-gray-700 p-3 mx-4 mb-2">
+                  <div className="space-y-2">
+                    <div className="flex items-start justify-between">
+                      <p className="text-sm text-gray-300 flex-1 pr-2">
+                        {item.prompt}
+                      </p>
+                      <Badge
+                        variant="outline"
+                        className={`text-xs ${
+                          item.status === 'completed'
+                            ? 'border-green-600 text-green-400'
+                            : item.status === 'pending'
+                            ? 'border-yellow-600 text-yellow-400'
+                            : 'border-red-600 text-red-400'
+                        }`}
+                      >
+                        {item.status}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center justify-between text-xs text-gray-500">
+                      <div className="flex items-center space-x-2">
+                        <Clock className="w-3 h-3" />
+                        <span>{item.timestamp.toLocaleString()}</span>
+                      </div>
+                      {item.status === 'completed' && (
+                        <div className="flex items-center space-x-1">
+                          <Star className="w-3 h-3 text-yellow-400" />
+                          <span>{item.score}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </Card>
+              )}
+              renderEmpty={() => (
+                <div className="flex flex-col items-center justify-center h-full p-8 text-gray-400">
+                  <History className="w-12 h-12 mb-4 text-gray-600" />
+                  <h3 className="text-lg font-medium text-gray-300 mb-2">No prompt history</h3>
+                  <p className="text-sm text-center">Your submitted prompts will appear here</p>
+                </div>
+              )}
+              limit={10}
+              threshold={50}
+              className="h-full"
+            />
+          </div>
+        )}
+
         {activeTab === 'analyze' && (
           <div className="p-4 space-y-4">
             <Card className="bg-gray-900 border-gray-700 p-3">
@@ -292,41 +397,67 @@ Return only the complete code, no explanations.`;
               </h3>
               <div className="flex items-center space-x-2">
                 <div className="flex-1 bg-gray-800 rounded-full h-2">
-                  <div className="bg-emerald-500 h-2 rounded-full w-3/4"></div>
+                  <div 
+                    className="bg-emerald-500 h-2 rounded-full transition-all duration-300" 
+                    style={{ width: `${(promptQualityScore / 10) * 100}%` }}
+                  ></div>
                 </div>
-                <span className="text-sm font-medium text-emerald-400">8.4/10</span>
+                <span className="text-sm font-medium text-emerald-400">{promptQualityScore}/10</span>
               </div>
             </Card>
 
             <Card className="bg-gray-900 border-gray-700 p-3">
               <h3 className="text-sm font-medium text-gray-300 mb-2">
-                Predicted Performance
+                Evaluation Metrics
               </h3>
               <div className="space-y-2 text-xs text-gray-400">
-                <div className="flex justify-between">
-                  <span>Creativity Score:</span>
-                  <span className="text-blue-400">High</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Clarity:</span>
-                  <span className="text-emerald-400">Excellent</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Engagement:</span>
-                  <span className="text-yellow-400">Very Good</span>
-                </div>
+                {promptMetrics ? (
+                  Object.entries(promptMetrics)
+                    .filter(([key]) => key !== 'final score')
+                    .map(([key, value]) => (
+                      <div key={key} className="flex justify-between">
+                        <span className="capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}:</span>
+                        <span className={`font-medium ${
+                          typeof value === 'number' && value >= 8 ? 'text-emerald-400' :
+                          typeof value === 'number' && value >= 6 ? 'text-yellow-400' :
+                          typeof value === 'number' && value >= 4 ? 'text-orange-400' :
+                          'text-red-400'
+                        }`}>
+                          {typeof value === 'number' ? `${value}/10` : String(value)}
+                        </span>
+                      </div>
+                    ))
+                ) : (
+                  <div className="text-gray-500 text-center py-2">
+                    Submit a prompt to see detailed metrics
+                  </div>
+                )}
               </div>
             </Card>
 
-            <Card className="bg-gray-900 border-gray-700 p-3">
-              <h3 className="text-sm font-medium text-gray-300 mb-2">
-                Similar Prompts Performance
-              </h3>
-              <div className="text-xs text-gray-400">
-                Prompts with similar structure scored an average of{' '}
-                <span className="text-blue-400 font-medium">7.8/10</span>
-              </div>
-            </Card>
+            {promptMetrics && (
+              <Card className="bg-gray-900 border-gray-700 p-3">
+                <h3 className="text-sm font-medium text-gray-300 mb-2">
+                  Improvement Suggestions
+                </h3>
+                <div className="text-xs text-gray-400 space-y-1">
+                  {Object.entries(promptMetrics)
+                    .filter(([key, value]) => key !== 'final score' && typeof value === 'number' && value < 7)
+                    .map(([key, value]) => (
+                      <div key={key} className="text-orange-400">
+                        • Improve {key.replace(/([A-Z])/g, ' $1').trim().toLowerCase()} (currently {String(value)}/10)
+                      </div>
+                    ))}
+                  {Object.entries(promptMetrics)
+                    .filter(([key, value]) => key !== 'final score' && typeof value === 'number' && value < 7)
+                    .length === 0 && (
+                    <div className="text-emerald-400">
+                      Great job! All metrics are performing well.
+                    </div>
+                  )}
+                </div>
+              </Card>
+            )}
           </div>
         )}
 

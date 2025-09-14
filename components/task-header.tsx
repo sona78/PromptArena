@@ -27,19 +27,7 @@ export function TaskHeader() {
         </div>
         
         <div className="flex items-center space-x-4">
-          <div className="flex items-center space-x-2 text-sm text-gray-400">
-            <Clock className="w-4 h-4" />
-            <span>15:42 remaining</span>
-          </div>
-          
-          <div className="flex items-center space-x-2 text-sm text-gray-400">
-            <Zap className="w-4 h-4 text-yellow-400" />
-            <span>+250 points</span>
-          </div>
-          
-          <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white">
-            Submit Prompt
-          </Button>
+          {/* Removed time remaining, points, and submit prompt button */}
         </div>
       </div>
       
