@@ -701,6 +701,22 @@ zPlease try again or check your configuration.`);
 
             <Card className="bg-gray-50 border-gray-200 p-3">
               <h3 className="text-sm font-medium text-gray-700 mb-2">
+                Carbon Emissions
+              </h3>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-600">Total:</span>
+                <div className="text-lg font-bold text-gray-800">
+                  {((lastPromptTokenCount * 0.0001) + (lastResponseTokenCount * 0.0003)).toFixed(4)}
+                </div>
+                <span className="text-xs text-gray-500">g CO₂</span>
+              </div>
+              <div className="text-xs text-gray-500 mt-2">
+                Based on 0.0001g per input token, 0.0003g per output token
+              </div>
+            </Card>
+
+            <Card className="bg-gray-50 border-gray-200 p-3">
+              <h3 className="text-sm font-medium text-gray-700 mb-2">
                 Prompt Quality Score
               </h3>
               <div className="flex items-center space-x-2">
