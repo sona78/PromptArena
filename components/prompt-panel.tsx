@@ -19,11 +19,8 @@ import {
 } from "lucide-react";
 import { useEditor } from "./editor-context";
 import { InfiniteScrollContainer } from "./infinite-scroll-container";
-<<<<<<< HEAD
-=======
 import { supabase } from '@/lib/supabase';
 import * as tokenizer from '@anthropic-ai/tokenizer';
->>>>>>> 267315932b338b21ba6d50cb0bfa7d44f1f96a25
 
 interface PromptPanelProps {
   sessionId: string;
@@ -38,9 +35,6 @@ export function PromptPanel({ sessionId }: PromptPanelProps) {
   const [lastResponseTokenCount, setLastResponseTokenCount] = useState(0);
   const { code, setCode, isLoading, setIsLoading, promptQualityScore, setPromptQualityScore, promptMetrics, setPromptMetrics, activeFile } = useEditor();
 
-<<<<<<< HEAD
-  // Calculate token count using simple estimation
-=======
   // Function to save prompt to database
   const savePromptToDatabase = async (promptText: string) => {
     if (!sessionId) return;
@@ -107,7 +101,6 @@ export function PromptPanel({ sessionId }: PromptPanelProps) {
   }, [sessionId]);
 
   // Calculate token count using Anthropic tokenizer
->>>>>>> 267315932b338b21ba6d50cb0bfa7d44f1f96a25
   const tokenCount = useMemo(() => {
     // Simple estimation: 1 token ≈ 4 characters for English text
     return Math.ceil(prompt.length / 4);
