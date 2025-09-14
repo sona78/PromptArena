@@ -10,6 +10,8 @@ import {
   Send,
   Sparkles,
   Brain,
+  Users,
+  Star,
   Clock,
   History,
   File,
@@ -25,7 +27,6 @@ import * as tokenizer from '@anthropic-ai/tokenizer';
 interface PromptPanelProps {
   sessionId: string;
 }
-
 
 export function PromptPanel({ sessionId }: PromptPanelProps) {
   const [prompt, setPrompt] = useState('');
@@ -223,6 +224,7 @@ export function PromptPanel({ sessionId }: PromptPanelProps) {
     }
   };
 
+
   const handleSubmit = async () => {
     if (!prompt.trim()) {
       return;
@@ -384,8 +386,34 @@ zPlease try again or check your configuration.`);
               Object.prototype.hasOwnProperty.call(evaluation, 'final score') &&
               typeof evaluation['final score'] === 'number'
             ) {
+<<<<<<< HEAD
+              const finalScore = evaluation['final score'];
+              setPromptQualityScore(finalScore);
+              
+              // Save the submission to database
+              if (sessionId && finalScore > 0) {
+                try {
+                  const response = await fetch('/api/submit-attempt', {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                      sessionId,
+                      prompt,
+                      score: finalScore,
+                      metrics: evaluation
+                    }),
+                  });
+
+                } catch (error) {
+                  console.error('Failed to save submission:', error);
+                }
+              }
+=======
               finalScore = evaluation['final score'];
               setPromptQualityScore(finalScore);
+>>>>>>> 2f1154b4778ee3f1716bdadaaac3d274de412e57
             }
 
             // Save feedback to database
@@ -396,6 +424,27 @@ zPlease try again or check your configuration.`);
             if (scoreMatch) {
               const score = parseFloat(scoreMatch[1]);
               setPromptQualityScore(score);
+              
+              // Save the submission to database
+              if (sessionId && score > 0) {
+                try {
+                  const response = await fetch('/api/submit-attempt', {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                      sessionId,
+                      prompt,
+                      score,
+                      metrics: {}
+                    }),
+                  });
+
+                } catch (error) {
+                  console.error('Failed to save submission:', error);
+                }
+              }
             }
           }
         } catch (parseError) {
