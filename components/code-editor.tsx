@@ -24,6 +24,8 @@ export function CodeEditor() {
     isExecuting,
     isSaving,
     hasUnsavedChanges,
+    taskType,
+    htmlOutput,
     executeMultiFile
   } = useEditor();
 
@@ -175,20 +177,47 @@ export function CodeEditor() {
         />
       </div>
 
-      {/* Status Bar */}
-      <div className="bg-gray-900 border-t border-gray-800 px-4 py-2 flex items-center justify-between text-xs text-gray-400 flex-shrink-0">
-        <div className="flex items-center space-x-4">
-          <span>Lines: {code.split('\n').length}</span>
-          <span>Characters: {code.length}</span>
-          <span>Words: {code.split(/\s+/).filter(word => word.length > 0).length}</span>
+      {/* HTML/CSS Preview for Type 1 Challenges */}
+      {taskType === 1 && htmlOutput && (
+        <div className="border-t border-gray-200 bg-white">
+          <div className="px-4 py-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <div className="w-3 h-3 rounded-full bg-green-500"></div>
+              <span className="text-sm font-medium text-gray-700">Live Preview</span>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-xs text-gray-500 hover:text-gray-700"
+              onClick={() => window.open(`data:text/html,${encodeURIComponent(htmlOutput)}`, '_blank')}
+            >
+              Open in New Tab
+            </Button>
+          </div>
+          <div className="h-96 overflow-hidden">
+            <iframe
+              srcDoc={htmlOutput}
+              className="w-full h-full border-0"
+              sandbox="allow-scripts allow-same-origin"
+              title="HTML/CSS Preview"
+            />
+          </div>
         </div>
+      )}
 
-        <div className="flex items-center space-x-2">
+      {/* Status Bar */}
+      <div className="bg-gray-50 border-t border-gray-200 px-4 py-2 flex items-center justify-between text-xs text-gray-600">
+        <div className="flex items-center space-x-4">
+          <span>Ready</span>
           {activeFile && (
-            <Badge className="bg-gray-800 text-gray-300 text-xs">
-              {activeFile.language.charAt(0).toUpperCase() + activeFile.language.slice(1)}
-            </Badge>
+            <span>Language: {activeFile.language}</span>
           )}
+          {taskType === 1 && htmlOutput && (
+            <span className="text-green-600">• Live Preview Active</span>
+          )}
+        </div>
+        <div className="flex items-center space-x-2">
+          <span>Ln 1, Col 1</span>
         </div>
       </div>
 
