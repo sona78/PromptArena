@@ -59,7 +59,7 @@ export async function GET(
     // Get user profiles for usernames
     const userIds = [...new Set(sessionsData?.map(session => session.user_id) || [])];
     
-    let usernameMap = new Map();
+    const usernameMap = new Map();
     if (userIds.length > 0) {
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')

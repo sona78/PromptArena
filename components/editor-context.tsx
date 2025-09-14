@@ -85,6 +85,8 @@ export function EditorProvider({ children }: { children: ReactNode }) {
   const [promptChainingScore, setPromptChainingScore] = useState<number | null>(null);
   const [codeAccuracyScore, setCodeAccuracyScore] = useState<number | null>(null);
 
+  // Note: Persistent scores are now updated via the existing saveFeedbackToDatabase function in prompt-panel.tsx
+
   const setLanguage = (newLanguage: 'javascript' | 'python') => {
     if (!activeFile) {
       setLanguageState(newLanguage);
@@ -345,21 +347,32 @@ export function EditorProvider({ children }: { children: ReactNode }) {
         ]);
 
         // Set all scores at once after all evaluations are complete
+        const newScores: {
+          promptChainingScore?: number | null;
+          codeEvaluationScore?: number | null;
+          codeAccuracyScore?: number | null;
+        } = {};
+
         if (codeEvaluationResult.success && codeEvaluationResult.evaluation) {
           setCodeEvaluationScore(codeEvaluationResult.evaluation.FinalScore);
+          newScores.codeEvaluationScore = codeEvaluationResult.evaluation.FinalScore;
         }
 
         if (promptEvaluationResult.success && promptEvaluationResult.evaluation) {
           setPromptChainingScore(promptEvaluationResult.evaluation.PromptChainingScore);
+          newScores.promptChainingScore = promptEvaluationResult.evaluation.PromptChainingScore;
         }
 
         if (accuracyEvaluationResult.success && accuracyEvaluationResult.evaluation) {
           setCodeAccuracyScore(accuracyEvaluationResult.evaluation.AccuracyScore);
+          newScores.codeAccuracyScore = accuracyEvaluationResult.evaluation.AccuracyScore;
         }
+
+        // Note: Persistent scores are automatically saved via saveFeedbackToDatabase in prompt-panel.tsx
       } catch (evaluationError) {
         console.error('Error running evaluations:', evaluationError);
       }
-    } catch (error) {
+    } catch (executionError) {
       setExecutionResult({
         success: false,
         output: '',

@@ -9,10 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Trophy, Settings, Upload, FileText, Code, Target } from "lucide-react";
-import Link from "next/link";
-import { supabase } from "@/lib/supabase";
+import { FileText, Code, Target } from "lucide-react";
 
 export default function CreateTaskPage() {
   const router = useRouter();

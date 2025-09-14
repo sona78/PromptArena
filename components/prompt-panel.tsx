@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -9,9 +9,6 @@ import {
   Send,
   Sparkles,
   Brain,
-  Users,
-  Star,
-  Clock,
   History,
   File,
   Mic,
@@ -98,8 +95,26 @@ export function PromptPanel({ sessionId }: PromptPanelProps) {
         return;
       }
 
-      // Create feedback entry
-      const feedbackEntry = {
+      // Extract persistent fields from current feedback
+      const currentFeedback = session?.feedback || {};
+      const persistentFields: Record<string, unknown> = {};
+
+      // Preserve persistent fields that should not be removed
+      if (typeof currentFeedback === 'object' && currentFeedback !== null) {
+        if ('promptChainingScore' in currentFeedback) {
+          persistentFields.promptChainingScore = currentFeedback.promptChainingScore;
+        }
+        if ('codeEvaluationScore' in currentFeedback) {
+          persistentFields.codeEvaluationScore = currentFeedback.codeEvaluationScore;
+        }
+        if ('codeAccuracyScore' in currentFeedback) {
+          persistentFields.codeAccuracyScore = currentFeedback.codeAccuracyScore;
+        }
+      }
+
+      // Overwrite feedback state with new submission, keeping persistent fields
+      const updatedFeedback = {
+        ...persistentFields,
         timestamp: new Date().toISOString(),
         type: 'prompt_analysis',
         data: {
@@ -107,19 +122,14 @@ export function PromptPanel({ sessionId }: PromptPanelProps) {
           qualityScore: qualityScore,
           promptTokenCount: lastPromptTokenCount,
           responseTokenCount: lastResponseTokenCount,
-          // Store prompt chaining data from left file system panel
+          // Include current scores from state (these will be the latest values)
           promptChainingScore: promptChainingScore,
           codeEvaluationScore: codeEvaluationScore,
           codeAccuracyScore: codeAccuracyScore
         }
       };
 
-      // Add to existing feedback object
-      const currentFeedback = session?.feedback || {};
-      const feedbackKey = `analysis_${Date.now()}`;
-      const updatedFeedback = { ...currentFeedback, [feedbackKey]: feedbackEntry };
-
-      // Update session with new feedback
+      // Update session with new feedback (complete overwrite)
       const { error: updateError } = await supabase
         .from('Sessions')
         .update({ feedback: updatedFeedback })
@@ -137,7 +147,7 @@ export function PromptPanel({ sessionId }: PromptPanelProps) {
   };
 
   // Function to fetch prompt history
-  const fetchPromptHistory = async () => {
+  const fetchPromptHistory = useCallback(async () => {
     if (!sessionId) return;
 
     try {
@@ -156,10 +166,10 @@ export function PromptPanel({ sessionId }: PromptPanelProps) {
     } catch (error) {
       console.error('Error fetching prompt history:', error);
     }
-  };
+  }, [sessionId]);
 
   // Function to fetch feedback data
-  const fetchFeedbackData = async () => {
+  const fetchFeedbackData = useCallback(async () => {
     if (!sessionId) return;
 
     try {
@@ -176,13 +186,11 @@ export function PromptPanel({ sessionId }: PromptPanelProps) {
 
       const feedback = session.feedback || {};
 
-      // Get the most recent prompt analysis feedback
-      const feedbackEntries = Object.values(feedback)
-        .filter((item: unknown): item is { type: string; timestamp: string } =>
-          typeof item === 'object' && item !== null && 'type' in item && item.type === 'prompt_analysis'
-        )
-        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-      const recentAnalysis = feedbackEntries[0];
+      // Since feedback is now a single object (not an array), check if it has the expected structure
+      let recentAnalysis = null;
+      if (typeof feedback === 'object' && feedback !== null && 'type' in feedback && feedback.type === 'prompt_analysis') {
+        recentAnalysis = feedback;
+      }
 
       if (
         recentAnalysis &&
@@ -229,13 +237,13 @@ export function PromptPanel({ sessionId }: PromptPanelProps) {
     } catch (error) {
       console.error('Error fetching feedback:', error);
     }
-  };
+  }, [sessionId, setPromptMetrics, setPromptQualityScore, setLastPromptTokenCount, setLastResponseTokenCount, setPromptChainingScore, setCodeEvaluationScore, setCodeAccuracyScore]);
 
   // Fetch prompt history and feedback data on component mount
   useEffect(() => {
     fetchPromptHistory();
     fetchFeedbackData();
-  }, [sessionId]);
+  }, [sessionId, fetchPromptHistory, fetchFeedbackData]);
 
   // Calculate token count using Anthropic tokenizer
   const tokenCount = useMemo(() => {
@@ -417,13 +425,13 @@ zPlease try again or check your configuration.`);
               Object.prototype.hasOwnProperty.call(evaluation, 'final score') &&
               typeof evaluation['final score'] === 'number'
             ) {
-              const finalScore = evaluation['final score'];
+              finalScore = evaluation['final score'];
               setPromptQualityScore(finalScore);
-              
+
               // Save the submission to database
               if (sessionId && finalScore > 0) {
                 try {
-                  const response = await fetch('/api/submit-attempt', {
+                  await fetch('/api/submit-attempt', {
                     method: 'POST',
                     headers: {
                       'Content-Type': 'application/json',
@@ -454,7 +462,7 @@ zPlease try again or check your configuration.`);
               // Save the submission to database
               if (sessionId && score > 0) {
                 try {
-                  const response = await fetch('/api/submit-attempt', {
+                  await fetch('/api/submit-attempt', {
                     method: 'POST',
                     headers: {
                       'Content-Type': 'application/json',

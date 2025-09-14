@@ -39,13 +39,39 @@ export async function POST(request: NextRequest) {
     }
 
     // Update the session with the new prompt and score
-    const updatedPrompts = Array.isArray(sessionData.prompts) 
+    const updatedPrompts = Array.isArray(sessionData.prompts)
       ? [...sessionData.prompts, prompt]
       : [prompt];
 
-    const updatedFeedback = Array.isArray(sessionData.feedback)
-      ? [...sessionData.feedback, metrics || {}]
-      : [metrics || {}];
+    // Overwrite feedback state but preserve persistent fields from previous feedback
+    const currentFeedback = sessionData.feedback || {};
+    const persistentFields = {};
+
+    // Extract persistent fields (like prompt chaining scores) if they exist
+    if (typeof currentFeedback === 'object' && currentFeedback !== null) {
+      if ('promptChainingScore' in currentFeedback) {
+        persistentFields.promptChainingScore = currentFeedback.promptChainingScore;
+      }
+      if ('codeEvaluationScore' in currentFeedback) {
+        persistentFields.codeEvaluationScore = currentFeedback.codeEvaluationScore;
+      }
+      if ('codeAccuracyScore' in currentFeedback) {
+        persistentFields.codeAccuracyScore = currentFeedback.codeAccuracyScore;
+      }
+    }
+
+    // Create new feedback object, overwriting previous state but keeping persistent fields
+    const updatedFeedback = {
+      ...persistentFields,
+      timestamp: new Date().toISOString(),
+      type: 'prompt_analysis',
+      data: {
+        metrics: metrics || {},
+        qualityScore: score,
+        // Keep persistent fields in data as well for backward compatibility
+        ...persistentFields
+      }
+    };
 
     // Update the session with the best score (keep highest score)
     const newScore = Math.max(sessionData.score || 0, score);
@@ -56,7 +82,6 @@ export async function POST(request: NextRequest) {
         prompts: updatedPrompts,
         feedback: updatedFeedback,
         score: newScore,
-        state: 1, // Mark as active/in progress
         updated_at: new Date().toISOString()
       })
       .eq('session_id', sessionId)
