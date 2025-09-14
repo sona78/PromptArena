@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -19,11 +19,37 @@ import {
 } from "lucide-react";
 import { useEditor } from "./editor-context";
 import { InfiniteScrollContainer } from "./infinite-scroll-container";
+import * as tokenizer from '@anthropic-ai/tokenizer';
 
 export function PromptPanel() {
   const [prompt, setPrompt] = useState('');
   const [activeTab, setActiveTab] = useState('write');
   const { code, setCode, isLoading, setIsLoading, promptQualityScore, setPromptQualityScore, promptMetrics, setPromptMetrics, activeFile } = useEditor();
+
+  // Calculate token count using Anthropic tokenizer
+  const tokenCount = useMemo(() => {
+    try {
+      console.log('Attempting to count tokens for:', prompt);
+      console.log('tokenizer object:', tokenizer);
+      console.log('Available methods:', Object.keys(tokenizer));
+      
+      // Test the tokenizer with a simple example first
+      const testTokens = tokenizer.countTokens("Hello world");
+      console.log('Test tokenizer works:', testTokens);
+      
+      const tokens = tokenizer.countTokens(prompt);
+      console.log('Token count:', tokens, 'for prompt:', prompt);
+      return tokens;
+    } catch (error) {
+      console.error('Error counting tokens:', error);
+      console.error('Error details:', error instanceof Error ? error.message : String(error));
+      
+      // Fallback: rough estimation (1 token ≈ 4 characters for English text)
+      const estimatedTokens = Math.ceil(prompt.length / 4);
+      console.log('Using fallback estimation:', estimatedTokens);
+      return estimatedTokens;
+    }
+  }, [prompt]);
 
   const handleSubmit = async () => {
     if (!prompt.trim()) {
@@ -151,7 +177,9 @@ Return only the complete code, no explanations.`;
 **Original Prompt:**
 ${prompt}
 
-Please try again or check your configuration.`);
+
+
+zPlease try again or check your configuration.`);
       }
 
       // Handle evaluation response
@@ -285,8 +313,8 @@ Please try again or check your configuration.`);
                 className="min-h-32 bg-gray-900 border-gray-700 text-gray-100 resize-none focus:border-blue-500"
                 disabled={isLoading}
               />
-              <div className="text-xs text-gray-500">
-                {prompt.length}/500 characters
+              <div className="text-xs text-blue-400 font-medium">
+                {tokenCount} tokens
               </div>
             </div>
 
@@ -391,6 +419,21 @@ Please try again or check your configuration.`);
 
         {activeTab === 'analyze' && (
           <div className="p-4 space-y-4">
+            <Card className="bg-gray-900 border-gray-700 p-3">
+              <h3 className="text-sm font-medium text-gray-300 mb-2">
+                Token Count
+              </h3>
+              <div className="flex items-center space-x-2">
+                <div className="text-2xl font-bold text-blue-400">
+                  {tokenCount}
+                </div>
+                <span className="text-sm text-gray-400">tokens</span>
+              </div>
+              <div className="text-xs text-gray-500 mt-1">
+                Current prompt: "{prompt.substring(0, 50)}{prompt.length > 50 ? '...' : ''}"
+              </div>
+            </Card>
+
             <Card className="bg-gray-900 border-gray-700 p-3">
               <h3 className="text-sm font-medium text-gray-300 mb-2">
                 Prompt Quality Score
