@@ -433,21 +433,19 @@ export function FileSystemSidebar({ sessionId }: FileSystemSidebarProps) {
         
         <Button
           onClick={handleCreateFile}
-          className="w-full text-xs bg-[#3073B7] hover:bg-[#3073B7]/80 text-white"
-          size="sm"
+          className="w-full bg-[#3073B7] hover:bg-[#3073B7]/80 text-white font-display-serif font-bold tracking-wide text-sm px-4 py-2"
           disabled={loading || creatingFile}
         >
           <Plus className="w-3 h-3 mr-1" />
-          New File
+          NEW FILE
         </Button>
         <Button
           onClick={fetchFiles}
           variant="outline"
-          className="w-full text-xs bg-[#C5AECF]/10 hover:bg-[#C5AECF]/20 text-[#28282D] border-[#79797C]"
-          size="sm"
+          className="w-full bg-[#C5AECF]/10 hover:bg-[#C5AECF]/20 text-[#28282D] border-[#79797C] font-display-serif font-bold tracking-wide text-sm px-4 py-2"
           disabled={loading}
         >
-          Refresh
+          REFRESH
         </Button>
       </div>
     </div>

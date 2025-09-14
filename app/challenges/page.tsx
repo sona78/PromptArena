@@ -25,6 +25,7 @@ interface CategoryConfig {
   icon: React.ElementType;
   taskTypes: number[];
   searchPlaceholder: string;
+  iconColor: string;
 }
 
 export default function DashboardPage() {
@@ -229,19 +230,22 @@ export default function DashboardPage() {
       title: "FRONTEND",
       icon: Monitor,
       taskTypes: [0], // Frontend tasks
-      searchPlaceholder: "Search frontend challenges..."
+      searchPlaceholder: "Search frontend challenges...",
+      iconColor: "#C5AECF"
     },
     {
       title: "BACKEND", 
       icon: Server,
       taskTypes: [1], // Backend tasks
-      searchPlaceholder: "Search backend challenges..."
+      searchPlaceholder: "Search backend challenges...",
+      iconColor: "#46295A"
     },
     {
       title: "MACHINE LEARNING",
       icon: Brain,
       taskTypes: [2], // ML tasks
-      searchPlaceholder: "Search ML challenges..."
+      searchPlaceholder: "Search ML challenges...",
+      iconColor: "#D79D00"
     }
   ];
 
@@ -270,7 +274,7 @@ export default function DashboardPage() {
       const matchesType = category.taskTypes.includes(task.type);
       const matchesSearch = searchQuery === "" || 
         task.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        task.description.toLowerCase().includes(searchQuery.toLowerCase());
+        (task.description && task.description.toLowerCase().includes(searchQuery.toLowerCase()));
       return matchesType && matchesSearch;
     });
   };
@@ -360,32 +364,68 @@ export default function DashboardPage() {
     }
   };
 
+  const getTaskIcon = (taskType: number) => {
+    switch (taskType) {
+      case 0: // Frontend
+        return <Monitor className="w-4 h-4 text-white" />;
+      case 1: // Backend
+        return <Server className="w-4 h-4 text-white" />;
+      case 2: // Machine Learning
+        return <Brain className="w-4 h-4 text-white" />;
+      default:
+        return <Target className="w-4 h-4 text-gray-600" />;
+    }
+  };
+
+  const getTaskIconBackground = (taskType: number) => {
+    switch (taskType) {
+      case 0: // Frontend
+        return "bg-[#C5AECF]";
+      case 1: // Backend
+        return "bg-[#46295A]";
+      case 2: // Machine Learning
+        return "bg-[#D79D00]";
+      default:
+        return "bg-gray-100";
+    }
+  };
+
+  const getTaskHoverClasses = (taskType: number) => {
+    switch (taskType) {
+      case 0: // Frontend
+        return "hover:shadow-lg hover:shadow-[#C5AECF]/30 hover:scale-105";
+      case 1: // Backend
+        return "hover:shadow-lg hover:shadow-[#46295A]/30 hover:scale-105";
+      case 2: // Machine Learning
+        return "hover:shadow-lg hover:shadow-[#D79D00]/30 hover:scale-105";
+      default:
+        return "hover:shadow-lg hover:shadow-gray-300/30 hover:scale-105";
+    }
+  };
+
   const renderChallengeCard = (task: Task) => (
-    <Card key={task.task_id} className="flex-shrink-0 w-80 bg-white border border-gray-200 hover:border-gray-300">
+    <Card key={task.task_id} className={`flex-shrink-0 w-80 bg-white border border-gray-200 hover:border-gray-300 transition-all duration-300 ease-in-out ${getTaskHoverClasses(task.type)}`}>
       <CardHeader className="p-4">
         <div className="flex items-start justify-between mb-3">
-          <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center">
-            <Target className="w-4 h-4 text-gray-600" />
+          <div className={`w-8 h-8 rounded-full ${getTaskIconBackground(task.type)} flex items-center justify-center`}>
+            {getTaskIcon(task.type)}
           </div>
-          <Badge variant="outline" className="text-xs">
-            Type {task.type}
-          </Badge>
         </div>
-        <CardTitle className="text-subtitle text-gray-900 line-clamp-2">
+        <CardTitle className="text-subtitle text-[#28282D] line-clamp-2">
           {task.name}
         </CardTitle>
-        <p className="text-body-sm text-gray-600 line-clamp-3 mt-2">
+        <p className="text-serif-sm text-[#79797C] line-clamp-3 mt-2">
           {task.description}
         </p>
       </CardHeader>
 
       <CardContent className="p-4 pt-0">
         <Button
-          className="w-full bg-gray-900 hover:bg-gray-800 text-white text-body-sm"
+          className="w-full bg-[#28282D] hover:bg-gray-800 text-white font-display-serif !text-white rounded-full tracking-wide text-sm font-bold"
           onClick={() => handleStartTask(task.task_id)}
           disabled={startingTask === task.task_id}
         >
-          {startingTask === task.task_id ? "Preparing..." : "Begin Challenge"}
+          {startingTask === task.task_id ? "BEGIN" : "BEGIN"}
         </Button>
       </CardContent>
     </Card>
@@ -401,24 +441,24 @@ export default function DashboardPage() {
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center space-x-3">
             <IconComponent className="w-6 h-6 text-gray-700" />
-            <h2 className="text-subtitle-lg text-gray-900">
+            <h2 className="text-section-header text-[#28282D]">
               {category.title}
             </h2>
           </div>
           <div className="relative w-80">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#28282D]/70 w-4 h-4" />
             <Input
               type="text"
               placeholder={category.searchPlaceholder}
               value={searchQuery}
               onChange={(e) => handleSearchChange(categoryKey, e.target.value)}
-              className="pl-10 bg-gray-50 border-gray-200 focus:border-gray-300 focus:ring-0"
+              className="pl-10 bg-[#79797C]/50 border-none focus:border-none focus:ring-0 rounded-full text-[#28282D] placeholder:text-[#28282D]/70"
             />
           </div>
         </div>
 
         {filteredTasks.length === 0 ? (
-          <div className="text-center py-12 text-body text-gray-500">
+          <div className="text-center py-12 text-serif text-[#79797C]">
             {searchQuery ? `No challenges found matching "${searchQuery}"` : "No challenges available in this category"}
           </div>
         ) : (
@@ -452,13 +492,13 @@ export default function DashboardPage() {
         {/* Main Content */}
         <div className="max-w-7xl mx-auto px-6 py-8">
           <div className="mb-8">
-            <h1 className="text-title-lg text-[#28282D] mb-2">CHALLENGES</h1>
-            <p className="text-body-lg text-[#79797C]">Test your prompt engineering skills with these organized challenges.</p>
+            <h1 className="text-section-header-lg text-[#28282D] mb-2">CHALLENGES</h1>
+            <p className="text-serif-lg text-[#79797C]">Test your prompt engineering skills with these organized challenges.</p>
           </div>
 
           {loading ? (
             <div className="flex items-center justify-center min-h-64">
-              <div className="text-body text-[#79797C]">Loading challenges...</div>
+              <div className="text-serif text-[#79797C]">Loading challenges...</div>
             </div>
           ) : (
             <div className="space-y-8">

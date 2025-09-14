@@ -137,13 +137,12 @@ export function CodeEditor() {
           </Button>
 
           <Button
-            size="sm"
-            className="bg-[#00656B] hover:bg-[#00656B]/80 text-white"
+            className="bg-[#00656B] hover:bg-[#00656B]/80 text-white font-display-serif font-bold tracking-wide text-sm px-4 py-2"
             onClick={handleRun}
             disabled={isExecuting || isLoading}
           >
             <Play className="w-4 h-4 mr-1" />
-            {isExecuting ? 'Running...' : 'Test Prompt'}
+            {isExecuting ? 'RUNNING...' : 'TEST PROMPT'}
           </Button>
         </div>
       </div>

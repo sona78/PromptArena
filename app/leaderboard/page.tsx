@@ -73,6 +73,19 @@ export default function LeaderboardPage() {
 
   const models = ["All Models", "GPT-4", "Claude-3", "Gemini", "LLaMA-2"];
   const categories = ["All Categories", "Frontend", "Backend", "ML"];
+  
+  const getCategoryColor = (category: string) => {
+    switch (category) {
+      case "Frontend":
+        return "bg-[#C5AECF] text-white border-[#C5AECF]";
+      case "Backend":
+        return "bg-[#46295A] text-white border-[#46295A]";
+      case "ML":
+        return "bg-[#D79D00] text-white border-[#D79D00]";
+      default:
+        return "bg-white text-[#28282D] border-[#28282D]";
+    }
+  };
   const metrics = [
     "Overall Score",
     "Verbiage Score",
@@ -111,77 +124,73 @@ export default function LeaderboardPage() {
 
         <div className="max-w-7xl mx-auto px-6 py-8">
           <div className="mb-8">
-            <h1 className="text-title-lg text-gray-900 mb-2">Leaderboard</h1>
-            <p className="text-body-lg text-gray-600">Top performing prompt engineers in our community.</p>
+            <h1 className="text-section-header-lg text-[#28282D] mb-2">LEADERBOARD</h1>
+            <p className="text-serif-lg text-[#79797C]">Top performing prompt engineers in our community.</p>
           </div>
 
           {/* Filter Dropdowns */}
-          <Card className="bg-white border border-gray-200 mb-6">
-            <CardContent className="p-6">
-              <div className="flex flex-wrap gap-4 justify-center">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="min-w-[160px] justify-between">
-                      {selectedModel}
-                      <ChevronDown className="w-4 h-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    {models.map((model) => (
-                      <DropdownMenuItem key={model} onClick={() => setSelectedModel(model)}>
-                        {model}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
+          <div className="flex flex-wrap gap-4 justify-center mb-8">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button className="min-w-[180px] justify-between rounded-full font-display-serif font-bold tracking-wide text-base px-6 py-3 bg-white text-[#28282D] border-[#28282D] hover:bg-gray-50">
+                  {selectedModel}
+                  <ChevronDown className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                {models.map((model) => (
+                  <DropdownMenuItem key={model} onClick={() => setSelectedModel(model)}>
+                    {model}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
 
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="min-w-[160px] justify-between">
-                      {selectedCategory}
-                      <ChevronDown className="w-4 h-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    {categories.map((category) => (
-                      <DropdownMenuItem key={category} onClick={() => setSelectedCategory(category)}>
-                        {category}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button className={`min-w-[180px] justify-between rounded-full font-display-serif font-bold tracking-wide text-base px-6 py-3 hover:opacity-90 ${getCategoryColor(selectedCategory)}`}>
+                  {selectedCategory}
+                  <ChevronDown className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                {categories.map((category) => (
+                  <DropdownMenuItem key={category} onClick={() => setSelectedCategory(category)}>
+                    {category}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
 
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="min-w-[160px] justify-between">
-                      {selectedMetric}
-                      <ChevronDown className="w-4 h-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    {metrics.map((metric) => (
-                      <DropdownMenuItem key={metric} onClick={() => setSelectedMetric(metric)}>
-                        {metric}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </CardContent>
-          </Card>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button className="min-w-[180px] justify-between rounded-full font-display-serif font-bold tracking-wide text-base px-6 py-3 bg-white text-[#28282D] border-[#28282D] hover:bg-gray-50">
+                  {selectedMetric}
+                  <ChevronDown className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                {metrics.map((metric) => (
+                  <DropdownMenuItem key={metric} onClick={() => setSelectedMetric(metric)}>
+                    {metric}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
 
           {/* Leaderboard Table */}
           <Card className="bg-white border border-gray-200">
             <CardContent className="p-0">
               <div className="overflow-hidden">
-                <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
-                  <div className="grid grid-cols-6 gap-4 text-subtitle-sm text-gray-700">
-                    <div className="text-left">Rank</div>
-                    <div className="text-left">Username</div>
-                    <div className="text-center">Verbiage Score</div>
-                    <div className="text-center">Prompts</div>
-                    <div className="text-center">Token Input</div>
-                    <div className="text-center">Code Performance</div>
+                <div className="bg-[#79797C] px-6 py-4 border-b border-gray-200 shadow-md">
+                  <div className="grid grid-cols-6 gap-4 font-display-serif font-bold tracking-wide text-sm text-white">
+                    <div className="text-left">RANK</div>
+                    <div className="text-left">USERNAME</div>
+                    <div className="text-center">VERBIAGE SCORE</div>
+                    <div className="text-center">PROMPTS</div>
+                    <div className="text-center">TOKEN INPUT</div>
+                    <div className="text-center">CODE PERFORMANCE</div>
                   </div>
                 </div>
                 
@@ -189,7 +198,7 @@ export default function LeaderboardPage() {
                   {mockLeaderboardData.map((entry, index) => (
                     <div
                       key={entry.username}
-                      className={`grid grid-cols-6 gap-4 px-6 py-4 text-body-sm hover:bg-gray-50 ${
+                      className={`grid grid-cols-6 gap-4 px-6 py-4 text-body-sm hover:bg-gray-50 items-center ${
                         index < 3 ? 'bg-blue-50/30' : 'bg-white'
                       }`}
                     >
@@ -197,7 +206,7 @@ export default function LeaderboardPage() {
                         {getRankIcon(entry.rank)}
                         <span className="text-body text-gray-700">#{entry.rank}</span>
                       </div>
-                      <div className="text-subtitle text-gray-900">{entry.username}</div>
+                      <div className="text-subtitle text-[#28282D]">{entry.username}</div>
                       <div className="text-center">
                         <span className={getPercentileColor(entry.verbiageScore)}>
                           {entry.verbiageScore}%

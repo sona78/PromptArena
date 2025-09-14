@@ -33,6 +33,23 @@ export default function CreateTaskPage() {
     { value: 2, label: "ML", description: "Machine learning, data analysis, and AI model development" }
   ];
 
+  const getTaskTypeColors = (taskType: number, isSelected: boolean) => {
+    if (!isSelected) {
+      return 'border-gray-200 hover:border-gray-300 bg-white';
+    }
+    
+    switch (taskType) {
+      case 0: // Frontend
+        return 'border-[#C5AECF] bg-[#C5AECF]/10';
+      case 1: // Backend
+        return 'border-[#46295A] bg-[#46295A]/10';
+      case 2: // ML
+        return 'border-[#D79D00] bg-[#D79D00]/10';
+      default:
+        return 'border-blue-500 bg-blue-50';
+    }
+  };
+
   const handleInputChange = (field: string, value: string | number) => {
     setFormData(prev => ({
       ...prev,
@@ -89,16 +106,16 @@ export default function CreateTaskPage() {
 
         <div className="max-w-4xl mx-auto px-6 py-8">
           <div className="mb-8">
-            <h1 className="text-title-lg text-gray-900 mb-2">Create New Task</h1>
-            <p className="text-body-lg text-gray-600">Design a new challenge for the community to tackle.</p>
+            <h1 className="text-section-header-lg text-[#28282D] mb-2">CREATE NEW TASK</h1>
+            <p className="text-serif-lg text-[#79797C]">Design a new challenge for the community to tackle.</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <Card className="bg-white border border-gray-200">
               <CardHeader>
-                <CardTitle className="flex items-center space-x-2 text-subtitle">
+                <CardTitle className="flex items-center space-x-2 font-display-serif font-bold tracking-wide text-lg">
                   <Target className="w-5 h-5" />
-                  <span>Basic Information</span>
+                  <span>BASIC INFORMATION</span>
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -136,14 +153,10 @@ export default function CreateTaskPage() {
                         key={type.value}
                         type="button"
                         onClick={() => handleInputChange('type', type.value)}
-                        className={`p-4 border rounded-lg text-left transition-colors ${
-                          formData.type === type.value
-                            ? 'border-blue-500 bg-blue-50'
-                            : 'border-gray-200 hover:border-gray-300'
-                        }`}
+                        className={`p-4 border rounded-lg text-left transition-colors ${getTaskTypeColors(type.value, formData.type === type.value)}`}
                       >
-                        <div className="text-subtitle text-gray-900">{type.label}</div>
-                        <div className="text-body-sm text-gray-600 mt-1">{type.description}</div>
+                        <div className="font-display-serif font-bold tracking-wide text-lg text-[#28282D]">{type.label}</div>
+                        <div className="text-body-sm text-[#79797C] mt-1">{type.description}</div>
                       </button>
                     ))}
                   </div>
@@ -154,9 +167,9 @@ export default function CreateTaskPage() {
 
             <Card className="bg-white border border-gray-200">
               <CardHeader>
-                <CardTitle className="flex items-center space-x-2 text-subtitle">
+                <CardTitle className="flex items-center space-x-2 font-display-serif font-bold tracking-wide text-lg">
                   <Code className="w-5 h-5" />
-                  <span>Challenge Files</span>
+                  <span>CHALLENGE FILES</span>
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -229,7 +242,7 @@ export default function CreateTaskPage() {
               <Button
                 type="submit"
                 disabled={loading || !formData.name || !formData.description || (challengeFiles.length > 0 && !formData.test_file_name)}
-                className="bg-gray-900 hover:bg-gray-800 text-white text-body"
+                className="bg-[#28282D] hover:bg-gray-800 text-white text-body"
               >
                 {loading ? "Creating..." : "Create Task"}
               </Button>

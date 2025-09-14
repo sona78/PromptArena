@@ -190,9 +190,9 @@ export default function BestPracticesPage() {
           <div className="mb-8">
             <div className="flex items-center space-x-3 mb-4">
               <Sparkles className="w-8 h-8 text-purple-600" />
-              <h1 className="text-3xl font-semibold text-gray-900">Best Practices</h1>
+              <h1 className="text-section-header-lg text-[#28282D]">BEST PRACTICES</h1>
             </div>
-            <p className="text-gray-600 text-lg">
+            <p className="text-serif-lg text-[#79797C]">
               Discover proven techniques extracted from the highest-performing prompts across different models.
             </p>
           </div>

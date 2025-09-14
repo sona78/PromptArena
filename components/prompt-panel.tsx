@@ -515,8 +515,7 @@ zPlease try again or check your configuration.`);
               <Button
                 key={tab.id}
                 variant={activeTab === tab.id ? "default" : "ghost"}
-                size="sm"
-                className={`text-xs ${
+                className={`font-display-serif font-bold tracking-wide text-sm px-4 py-2 ${
                   activeTab === tab.id
                     ? 'bg-[#3073B7] text-white'
                     : 'text-[#79797C] hover:text-[#28282D] hover:bg-[#C5AECF]/20'
@@ -524,7 +523,7 @@ zPlease try again or check your configuration.`);
                 onClick={() => setActiveTab(tab.id)}
               >
                 <Icon className="w-3 h-3 mr-1" />
-                {tab.label}
+                {tab.label.toUpperCase()}
               </Button>
             );
           })}
@@ -583,7 +582,7 @@ zPlease try again or check your configuration.`);
                 disabled={isLoading}
               />
               <div className="flex items-center justify-between">
-                <div className="text-xs text-blue-600 font-medium">
+                <div className="text-xs font-medium" style={{ color: '#3073B7' }}>
                   {tokenCount} tokens
                 </div>
                 {voiceError && (
@@ -608,16 +607,16 @@ zPlease try again or check your configuration.`);
 
 
             <Button
-                className="w-full bg-[#3073B7] hover:bg-[#3073B7]/80 text-white"
+              className="w-full bg-[#3073B7] hover:bg-[#3073B7]/80 text-white font-display-serif font-bold tracking-wide text-sm px-4 py-2"
               onClick={handleSubmit}
               disabled={isLoading || !prompt.trim()}
             >
               <Send className="w-4 h-4 mr-2" />
               {isLoading
-                ? 'Calling Claude...'
+                ? 'CALLING CLAUDE...'
                 : activeFile
-                  ? `Modify ${activeFile.name}`
-                  : 'Generate Code'
+                  ? `MODIFY ${activeFile.name.toUpperCase()}`
+                  : 'GENERATE CODE'
               }
             </Button>
 
@@ -643,18 +642,6 @@ zPlease try again or check your configuration.`);
               </div>
             )}
 
-            <div className="pt-4 border-t border-gray-200">
-              <h3 className="text-sm font-medium text-gray-700 mb-2 flex items-center">
-                <Sparkles className="w-4 h-4 mr-1 text-yellow-600" />
-                Prompt Tips
-              </h3>
-              <ul className="text-xs text-gray-600 space-y-1">
-                <li>• Be specific but leave room for creativity</li>
-                <li>• Include emotional or conflict elements</li>
-                <li>• Set clear constraints or parameters</li>
-                <li>• Consider unique perspectives or settings</li>
-              </ul>
-            </div>
           </div>
         )}
 

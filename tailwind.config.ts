@@ -11,10 +11,13 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
-        title: ['Inter Tight', 'Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
-        subtitle: ['Crimson Pro', 'Crimson Text', 'Georgia', 'Times New Roman', 'serif'],
-        body: ['-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
+        sans: ['Oxygen', 'Arial', 'Helvetica', 'sans-serif'],
+        title: ['Oxygen', 'Arial', 'Helvetica', 'sans-serif'],
+        subtitle: ['Oxygen', 'Arial', 'Helvetica', 'sans-serif'],
+        body: ['Oxygen', 'Arial', 'Helvetica', 'sans-serif'],
+        code: ['JetBrains Mono', 'Fira Code', 'Monaco', 'Consolas', 'Liberation Mono', 'Courier New', 'monospace'],
+        'display-serif': ['Unbounded', 'Arial Black', 'Helvetica', 'sans-serif'],
+        'serif': ['Oxygen', 'Arial', 'Helvetica', 'sans-serif'],
       },
       fontSize: {
         'title': ['2.5rem', { lineHeight: '1.2', letterSpacing: '0.02em' }],
