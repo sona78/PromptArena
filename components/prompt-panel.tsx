@@ -192,27 +192,8 @@ export function PromptPanel({ sessionId }: PromptPanelProps) {
 
   // Calculate token count using Anthropic tokenizer
   const tokenCount = useMemo(() => {
-    try {
-      console.log('Attempting to count tokens for:', prompt);
-      console.log('tokenizer object:', tokenizer);
-      console.log('Available methods:', Object.keys(tokenizer));
-      
-      // Test the tokenizer with a simple example first
-      const testTokens = tokenizer.countTokens("Hello world");
-      console.log('Test tokenizer works:', testTokens);
-      
-      const tokens = tokenizer.countTokens(prompt);
-      console.log('Token count:', tokens, 'for prompt:', prompt);
-      return tokens;
-    } catch (error) {
-      console.error('Error counting tokens:', error);
-      console.error('Error details:', error instanceof Error ? error.message : String(error));
-      
-      // Fallback: rough estimation (1 token ≈ 4 characters for English text)
-      const estimatedTokens = Math.ceil(prompt.length / 4);
-      console.log('Using fallback estimation:', estimatedTokens);
-      return estimatedTokens;
-    }
+    // Simple estimation: 1 token ≈ 4 characters for English text
+    return Math.ceil(prompt.length / 4);
   }, [prompt]);
 
   const handleSubmit = async () => {
@@ -220,17 +201,9 @@ export function PromptPanel({ sessionId }: PromptPanelProps) {
       return;
     }
 
-    // Store the token count of the submitted prompt
-    try {
-      const submittedTokenCount = tokenizer.countTokens(prompt);
-      setLastPromptTokenCount(submittedTokenCount);
-      console.log('Stored token count for submitted prompt:', submittedTokenCount);
-    } catch (error) {
-      console.error('Error counting tokens for submitted prompt:', error);
-      // Fallback estimation
-      const estimatedTokens = Math.ceil(prompt.length / 4);
-      setLastPromptTokenCount(estimatedTokens);
-    }
+    // Store the token count of the submitted prompt using simple estimation
+    const submittedTokenCount = Math.ceil(prompt.length / 4);
+    setLastPromptTokenCount(submittedTokenCount);
 
     setIsLoading(true);
 
@@ -338,17 +311,9 @@ Return only the complete code, no explanations.`;
         cleanedCode = cleanedCode.replace(/^```\w*\n?/gm, '');
         cleanedCode = cleanedCode.replace(/\n?```$/gm, '');
 
-        // Count tokens in Claude's response
-        try {
-          const responseTokenCount = tokenizer.countTokens(cleanedCode);
-          setLastResponseTokenCount(responseTokenCount);
-          console.log('Claude response token count:', responseTokenCount);
-        } catch (error) {
-          console.error('Error counting response tokens:', error);
-          // Fallback estimation
-          const estimatedTokens = Math.ceil(cleanedCode.length / 4);
-          setLastResponseTokenCount(estimatedTokens);
-        }
+        // Count tokens in Claude's response using simple estimation
+        const responseTokenCount = Math.ceil(cleanedCode.length / 4);
+        setLastResponseTokenCount(responseTokenCount);
 
         // Update the editor with cleaned response
         // This will trigger the auto-save system if there's an active file
