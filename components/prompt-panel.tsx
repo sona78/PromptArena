@@ -98,9 +98,10 @@ export function PromptPanel({ sessionId }: PromptPanelProps) {
         }
       };
 
-      // Add to existing feedback array
-      const currentFeedback = session?.feedback || [];
-      const updatedFeedback = [...currentFeedback, feedbackEntry];
+      // Add to existing feedback object
+      const currentFeedback = session?.feedback || {};
+      const feedbackKey = `analysis_${Date.now()}`;
+      const updatedFeedback = { ...currentFeedback, [feedbackKey]: feedbackEntry };
 
       // Update session with new feedback
       const { error: updateError } = await supabase
@@ -157,12 +158,13 @@ export function PromptPanel({ sessionId }: PromptPanelProps) {
         return;
       }
 
-      const feedback = session.feedback || [];
+      const feedback = session.feedback || {};
 
       // Get the most recent prompt analysis feedback
-      const recentAnalysis = feedback
+      const feedbackEntries = Object.values(feedback)
         .filter((item: any) => item.type === 'prompt_analysis')
-        .sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0];
+        .sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      const recentAnalysis = feedbackEntries[0];
 
       if (recentAnalysis && recentAnalysis.data) {
         // Restore the metrics and scores from the most recent analysis

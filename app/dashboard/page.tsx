@@ -19,6 +19,99 @@ interface Task {
   leaderboard: string[] | null;
 }
 
+async function getAllFilesRecursive(
+  basePath: string,
+  currentPath: string = '',
+  allFiles: Array<{name: string, path: string}> = []
+): Promise<Array<{name: string, path: string}>> {
+  const fullPath = currentPath ? `${basePath}/${currentPath}` : basePath;
+
+  const { data: items, error } = await supabase.storage
+    .from('Templates')
+    .list(fullPath, {
+      sortBy: { column: 'name', order: 'asc' }
+    });
+
+  if (error || !items) {
+    return allFiles;
+  }
+
+  for (const item of items) {
+    const itemPath = currentPath ? `${currentPath}/${item.name}` : item.name;
+
+    if (item.metadata) {
+      // It's a file
+      allFiles.push({ name: item.name, path: itemPath });
+    } else {
+      // It's a folder, recurse into it
+      await getAllFilesRecursive(basePath, itemPath, allFiles);
+    }
+  }
+
+  return allFiles;
+}
+
+async function copyTemplateIfExists(taskId: string, sessionId: string) {
+  try {
+    // First check if template folder exists at all
+    const { data: templateCheck, error: checkError } = await supabase.storage
+      .from('Templates')
+      .list(`${taskId}`, { limit: 1 });
+
+    if (checkError || !templateCheck || templateCheck.length === 0) {
+      console.log(`No template found for task ${taskId}`);
+      return false;
+    }
+
+    // Get all files recursively from template folder
+    const templateFiles = await getAllFilesRecursive(`${taskId}`);
+
+    if (templateFiles.length === 0) {
+      console.log(`Template folder exists for task ${taskId} but contains no files`);
+      return false;
+    }
+
+    console.log(`Template found for task ${taskId}, copying ${templateFiles.length} files recursively`);
+
+    let successfulCopies = 0;
+
+    // Copy each file from template to session folder, preserving directory structure
+    for (const file of templateFiles) {
+      try {
+        // Download the template file
+        const { data: fileData, error: downloadError } = await supabase.storage
+          .from('Templates')
+          .download(`${taskId}/${file.path}`);
+
+        if (downloadError) {
+          console.error(`Error downloading template file ${file.path}:`, downloadError);
+          continue;
+        }
+
+        // Upload to session folder, preserving path structure
+        const { error: uploadError } = await supabase.storage
+          .from('Sessions')
+          .upload(`${sessionId}/${file.path}`, fileData);
+
+        if (uploadError) {
+          console.error(`Error uploading file ${file.path} to session:`, uploadError);
+        } else {
+          console.log(`Successfully copied ${file.path} to session ${sessionId}`);
+          successfulCopies++;
+        }
+      } catch (error) {
+        console.error(`Error processing template file ${file.path}:`, error);
+      }
+    }
+
+    console.log(`Successfully copied ${successfulCopies}/${templateFiles.length} template files`);
+    return successfulCopies > 0;
+  } catch (error) {
+    console.error('Error copying template:', error);
+    return false;
+  }
+}
+
 export default function DashboardPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
@@ -81,8 +174,7 @@ export default function DashboardPage() {
             user_id: user.id,
             task_id: taskId,
             prompts: [],
-            feedback: [],
-            state: 0,
+            feedback: {},
             score: 0
           });
 
@@ -91,14 +183,19 @@ export default function DashboardPage() {
           return;
         }
 
-        // Create folder in storage bucket
-        const { error: storageError } = await supabase.storage
-          .from('Sessions')
-          .upload(`${sessionId}/.keep`, new Blob([''], { type: 'text/plain' }));
+        // Check if template exists for this task
+        const templateCopied = await copyTemplateIfExists(taskId, sessionId);
 
-        if (storageError) {
-          console.error('Error creating storage folder:', storageError);
-          // Don't return here as session was already created successfully
+        // Create folder in storage bucket if no template was copied
+        if (!templateCopied) {
+          const { error: storageError } = await supabase.storage
+            .from('Sessions')
+            .upload(`${sessionId}/.keep`, new Blob([''], { type: 'text/plain' }));
+
+          if (storageError) {
+            console.error('Error creating storage folder:', storageError);
+            // Don't return here as session was already created successfully
+          }
         }
       }
 
