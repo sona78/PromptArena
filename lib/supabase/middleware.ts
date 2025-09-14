@@ -17,7 +17,7 @@ export async function updateSession(request: NextRequest) {
   // variable. Always create a new one on each request.
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
         getAll() {
@@ -42,21 +42,31 @@ export async function updateSession(request: NextRequest) {
   // supabase.auth.getClaims(). A simple mistake could make it very hard to debug
   // issues with users being randomly logged out.
 
-  // IMPORTANT: If you remove getClaims() and you use server-side rendering
+  // IMPORTANT: If you remove getUser() and you use server-side rendering
   // with the Supabase client, your users may be randomly logged out.
-  const { data } = await supabase.auth.getClaims();
-  const user = data?.claims;
+  const { data: { user }, error } = await supabase.auth.getUser();
+  
+  // If there's an error getting the user, treat as unauthenticated
+  if (error) {
+    console.log('Auth error in middleware:', error);
+  }
 
-  if (
-    request.nextUrl.pathname !== "/" &&
-    !user &&
-    !request.nextUrl.pathname.startsWith("/auth") &&
-    !request.nextUrl.pathname.startsWith("/api") &&
-    request.nextUrl.pathname !== "/auth/login"
-  ) {
-    // no user, potentially respond by redirecting the user to the login page
+  // Add debug logging
+  console.log(`Middleware: ${request.nextUrl.pathname}, User: ${user?.id || 'none'}, Protected: ${!request.nextUrl.pathname.startsWith('/auth') && !request.nextUrl.pathname.startsWith('/api') && request.nextUrl.pathname !== '/'}, HasEnvVars: ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`);
+
+  // Only redirect to login if:
+  // 1. User is not authenticated
+  // 2. Path is not already auth-related
+  // 3. Path is not API or static assets
+  // 4. Path is not the root
+  const isProtectedRoute = !request.nextUrl.pathname.startsWith('/auth') && 
+                          !request.nextUrl.pathname.startsWith('/api') && 
+                          !request.nextUrl.pathname.startsWith('/_next') &&
+                          request.nextUrl.pathname !== '/';
+
+  if (!user && isProtectedRoute) {
     const url = request.nextUrl.clone();
-    url.pathname = "/auth/login";
+    url.pathname = '/auth/login';
     return NextResponse.redirect(url);
   }
 

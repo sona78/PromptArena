@@ -39,9 +39,9 @@ export function LoginForm({
       });
       if (error) throw error;
       
-      // Use router.push and refresh to properly update session
-      router.push("/challenges");
-      router.refresh();
+      // Wait for auth state to update, then redirect
+      await new Promise(resolve => setTimeout(resolve, 100));
+      window.location.href = "/challenges";
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : "An error occurred");
     } finally {

@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Target, ChevronLeft, ChevronRight, Search, Monitor, Server, Brain } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { AuthGuard } from "@/components/auth-guard";
 import { Navigation } from "@/components/navigation";
 import { supabase } from "@/lib/supabase";
 
@@ -484,31 +483,29 @@ export default function DashboardPage() {
   };
 
   return (
-    <AuthGuard>
-      <div className="min-h-screen bg-white">
-        {/* Navigation Bar */}
-        <Navigation />
+    <div className="min-h-screen bg-white">
+      {/* Navigation Bar */}
+      <Navigation />
 
-        {/* Main Content */}
-        <div className="max-w-7xl mx-auto px-6 py-8">
-          <div className="mb-8">
-            <h1 className="text-section-header-lg text-[#28282D] mb-2">CHALLENGES</h1>
-            <p className="text-serif-lg text-[#79797C]">Test your prompt engineering skills with these organized challenges.</p>
-          </div>
-
-          {loading ? (
-            <div className="flex items-center justify-center min-h-64">
-              <div className="text-serif text-[#79797C]">Loading challenges...</div>
-            </div>
-          ) : (
-            <div className="space-y-8">
-              {categories.map((category, index) => 
-                renderCategory(category, ['frontend', 'backend', 'ml'][index])
-              )}
-            </div>
-          )}
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-6 py-8">
+        <div className="mb-8">
+          <h1 className="text-section-header-lg text-[#28282D] mb-2">CHALLENGES</h1>
+          <p className="text-serif-lg text-[#79797C]">Test your prompt engineering skills with these organized challenges.</p>
         </div>
+
+        {loading ? (
+          <div className="flex items-center justify-center min-h-64">
+            <div className="text-serif text-[#79797C]">Loading challenges...</div>
+          </div>
+        ) : (
+          <div className="space-y-8">
+            {categories.map((category, index) => 
+              renderCategory(category, ['frontend', 'backend', 'ml'][index])
+            )}
+          </div>
+        )}
       </div>
-    </AuthGuard>
+    </div>
   );
 }

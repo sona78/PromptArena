@@ -56,6 +56,7 @@ export function AuthGuard({ children, fallback }: AuthGuardProps) {
 
   useEffect(() => {
     if (shouldRedirect && !loading) {
+      // Use router.push for client-side navigation
       router.push("/auth/login");
     }
   }, [shouldRedirect, loading, router]);
