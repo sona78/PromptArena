@@ -69,18 +69,6 @@ export function Navigation({ showRank = true, className }: NavigationProps) {
         </div>
         
         <div className="flex items-center space-x-4">
-          {showRank && (
-            <div className="hidden sm:flex items-center space-x-2 text-sm text-gray-500">
-              <span>Rank</span>
-              <Badge variant="outline">
-                #1,247
-              </Badge>
-            </div>
-          )}
-          
-          <button className="p-2 text-gray-500 hover:text-gray-700 transition-colors duration-200">
-            <Settings className="w-4 h-4" />
-          </button>
 
           <LogoutButton />
         </div>
