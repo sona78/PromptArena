@@ -23,7 +23,7 @@ export function Navigation({ showRank = true, className }: NavigationProps) {
   };
 
   const getLinkClassName = (path: string) => {
-    const baseClasses = "text-sm transition-colors duration-200";
+    const baseClasses = "text-subtitle-sm transition-colors duration-200";
     if (isActivePage(path)) {
       return `${baseClasses} text-gray-900 font-medium`;
     }
@@ -36,7 +36,7 @@ export function Navigation({ showRank = true, className }: NavigationProps) {
         <div className="flex items-center space-x-8">
           <Link href="/challenges" className="flex items-center space-x-2">
             <Trophy className="w-5 h-5 text-gray-900" />
-            <span className="text-xl font-medium text-gray-900">
+            <span className="text-title text-gray-900">
               PromptArena
             </span>
             <Badge variant="outline" className="text-xs">
@@ -70,7 +70,7 @@ export function Navigation({ showRank = true, className }: NavigationProps) {
         
         <div className="flex items-center space-x-4">
           {showRank && (
-            <div className="hidden sm:flex items-center space-x-2 text-sm text-gray-500">
+            <div className="hidden sm:flex items-center space-x-2 text-body-sm text-gray-500">
               <span>Rank</span>
               <Badge variant="outline">
                 #1,247

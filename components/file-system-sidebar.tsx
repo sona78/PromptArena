@@ -265,8 +265,8 @@ export function FileSystemSidebar({ sessionId }: FileSystemSidebarProps) {
     return (
       <div key={`${item.path}-${index}`}>
         <div
-          className={`flex items-center py-1 px-2 hover:bg-gray-800 cursor-pointer text-sm group ${
-            isActive ? 'bg-blue-900/50 border-r-2 border-blue-500' : ''
+          className={`flex items-center py-1 px-2 hover:bg-[#C5AECF]/20 cursor-pointer text-sm group ${
+            isActive ? 'bg-[#3073B7]/10 border-r-2 border-[#3073B7]' : ''
           }`}
           style={{ paddingLeft: `${paddingLeft}px` }}
         >
@@ -277,25 +277,25 @@ export function FileSystemSidebar({ sessionId }: FileSystemSidebarProps) {
             {item.type === 'folder' ? (
               <>
                 {item.isExpanded ? (
-                  <ChevronDown className="w-4 h-4 mr-1 text-gray-400" />
+                  <ChevronDown className="w-4 h-4 mr-1 text-[#79797C]" />
                 ) : (
-                  <ChevronRight className="w-4 h-4 mr-1 text-gray-400" />
+                  <ChevronRight className="w-4 h-4 mr-1 text-[#79797C]" />
                 )}
-                <Folder className="w-4 h-4 mr-2 text-blue-400" />
+                <Folder className="w-4 h-4 mr-2 text-[#00656B]" />
               </>
             ) : (
               <>
                 <div className="w-4 h-4 mr-1" />
                 {isTestFile ? (
-                  <Lock className="w-4 h-4 mr-2 text-red-400" />
+                  <Lock className="w-4 h-4 mr-2 text-[#953640]" />
                 ) : (
-                  <File className="w-4 h-4 mr-2 text-gray-400" />
+                  <File className="w-4 h-4 mr-2 text-[#79797C]" />
                 )}
               </>
             )}
-            <span className={`truncate ${isActive ? 'text-blue-200 font-medium' : 'text-gray-200'} ${isTestFile ? 'opacity-75' : ''}`}>
+            <span className={`truncate ${isActive ? 'text-[#3073B7] font-medium' : 'text-[#28282D]'} ${isTestFile ? 'opacity-75' : ''}`}>
               {item.name}
-              {isTestFile && <span className="text-xs text-red-400 ml-1">(test - locked)</span>}
+              {isTestFile && <span className="text-xs text-[#953640] ml-1">(test - locked)</span>}
             </span>
           </div>
 
@@ -306,7 +306,7 @@ export function FileSystemSidebar({ sessionId }: FileSystemSidebarProps) {
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-6 w-6 p-0 text-gray-400 hover:text-white"
+                    className="h-6 w-6 p-0 text-[#79797C] hover:text-[#28282D]"
                   >
                     <MoreHorizontal className="w-3 h-3" />
                   </Button>
@@ -317,7 +317,7 @@ export function FileSystemSidebar({ sessionId }: FileSystemSidebarProps) {
                       e.stopPropagation();
                       deleteFile(item.name);
                     }}
-                    className="text-red-400 focus:text-red-300"
+                    className="text-[#953640] focus:text-[#953640]/80"
                   >
                     <Trash2 className="w-3 h-3 mr-2" />
                     Delete
@@ -341,18 +341,18 @@ export function FileSystemSidebar({ sessionId }: FileSystemSidebarProps) {
 
   if (!sessionId) {
     return (
-      <div className="w-64 bg-gray-900 border-r border-gray-800 p-4">
-        <div className="text-gray-400 text-sm">No session selected</div>
+      <div className="w-64 bg-white border-r border-[#79797C] p-4">
+        <div className="text-[#79797C] text-sm">No session selected</div>
       </div>
     );
   }
 
   return (
-    <div className="w-64 bg-gray-900 border-r border-gray-800 flex flex-col">
+    <div className="w-64 bg-white border-r border-[#79797C] flex flex-col">
       {/* Header */}
-      <div className="p-4 border-b border-gray-800">
-        <h3 className="font-semibold text-gray-200 text-sm">Files</h3>
-        <p className="text-xs text-gray-500 mt-1 truncate" title={sessionId}>
+      <div className="p-4 border-b border-[#79797C]">
+        <h3 className="font-semibold text-[#28282D] text-sm">Files</h3>
+        <p className="text-xs text-[#79797C] mt-1 truncate" title={sessionId}>
           {sessionId}
         </p>
       </div>
@@ -361,13 +361,13 @@ export function FileSystemSidebar({ sessionId }: FileSystemSidebarProps) {
       <div className="flex-1 overflow-y-auto">
         {loading ? (
           <div className="flex items-center justify-center p-4">
-            <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
-            <span className="ml-2 text-sm text-gray-400">Loading...</span>
+            <Loader2 className="w-4 h-4 animate-spin text-[#3073B7]" />
+            <span className="ml-2 text-sm text-[#79797C]">Loading...</span>
           </div>
         ) : error ? (
-          <div className="p-4 text-sm text-red-400">{error}</div>
+          <div className="p-4 text-sm text-[#953640]">{error}</div>
         ) : files.length === 0 ? (
-          <div className="p-4 text-sm text-gray-500">No files found</div>
+          <div className="p-4 text-sm text-[#79797C]">No files found</div>
         ) : (
           <div className="py-2">
             {files.map((file, index) => renderFileItem(file, index))}
@@ -377,13 +377,13 @@ export function FileSystemSidebar({ sessionId }: FileSystemSidebarProps) {
               <div className="px-2 py-1">
                 <form onSubmit={handleCreateFileSubmit} className="flex items-center space-x-1">
                   <div className="w-4 h-4 mr-1" />
-                  <File className="w-4 h-4 mr-2 text-gray-400" />
+                  <File className="w-4 h-4 mr-2 text-[#79797C]" />
                   <Input
                     type="text"
                     value={newFileName}
                     onChange={(e) => setNewFileName(e.target.value)}
                     placeholder="filename.py"
-                    className="h-6 text-xs bg-gray-800 border-gray-700 text-gray-200 flex-1"
+                    className="h-6 text-xs bg-white border-[#79797C] text-[#28282D] flex-1"
                     autoFocus
                     onBlur={handleCreateFileCancel}
                     onKeyDown={(e) => {
@@ -400,30 +400,30 @@ export function FileSystemSidebar({ sessionId }: FileSystemSidebarProps) {
       </div>
 
       {/* Actions */}
-      <div className="p-2 border-t border-gray-800 space-y-2">
+      <div className="p-2 border-t border-[#79797C] space-y-2">
         {/* Evaluation Scores */}
         {(codeEvaluationScore !== null || promptChainingScore !== null || codeAccuracyScore !== null) && (
           <div className="space-y-2">
             {codeEvaluationScore !== null && (
-              <div className="bg-gray-800 border border-gray-700 rounded-md p-2 text-center">
-                <div className="text-xs text-gray-400 mb-1">Code Quality Score</div>
-                <div className="text-lg font-bold text-blue-400">
+              <div className="bg-[#C5AECF]/10 border border-[#C5AECF] rounded-md p-2 text-center">
+                <div className="text-xs text-[#79797C] mb-1">Code Quality Score</div>
+                <div className="text-lg font-bold text-[#3073B7]">
                   {(codeEvaluationScore * 100).toFixed(0)}%
                 </div>
               </div>
             )}
             {promptChainingScore !== null && (
-              <div className="bg-gray-800 border border-gray-700 rounded-md p-2 text-center">
-                <div className="text-xs text-gray-400 mb-1">Prompt Chaining Score</div>
-                <div className="text-lg font-bold text-green-400">
+              <div className="bg-[#C5AECF]/10 border border-[#C5AECF] rounded-md p-2 text-center">
+                <div className="text-xs text-[#79797C] mb-1">Prompt Chaining Score</div>
+                <div className="text-lg font-bold text-[#00656B]">
                   {(promptChainingScore * 100).toFixed(0)}%
                 </div>
               </div>
             )}
             {codeAccuracyScore !== null && (
-              <div className="bg-gray-800 border border-gray-700 rounded-md p-2 text-center">
-                <div className="text-xs text-gray-400 mb-1">Code Accuracy Score</div>
-                <div className="text-lg font-bold text-purple-400">
+              <div className="bg-[#C5AECF]/10 border border-[#C5AECF] rounded-md p-2 text-center">
+                <div className="text-xs text-[#79797C] mb-1">Code Accuracy Score</div>
+                <div className="text-lg font-bold text-[#46295A]">
                   {(codeAccuracyScore * 100).toFixed(0)}%
                 </div>
               </div>
@@ -433,7 +433,7 @@ export function FileSystemSidebar({ sessionId }: FileSystemSidebarProps) {
         
         <Button
           onClick={handleCreateFile}
-          className="w-full text-xs bg-blue-600 hover:bg-blue-700 text-white"
+          className="w-full text-xs bg-[#3073B7] hover:bg-[#3073B7]/80 text-white"
           size="sm"
           disabled={loading || creatingFile}
         >
@@ -443,7 +443,7 @@ export function FileSystemSidebar({ sessionId }: FileSystemSidebarProps) {
         <Button
           onClick={fetchFiles}
           variant="outline"
-          className="w-full text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 border-gray-700"
+          className="w-full text-xs bg-[#C5AECF]/10 hover:bg-[#C5AECF]/20 text-[#28282D] border-[#79797C]"
           size="sm"
           disabled={loading}
         >

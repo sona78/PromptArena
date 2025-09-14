@@ -62,40 +62,40 @@ export function TaskHeader({ sessionId }: TaskHeaderProps) {
 
   if (loading) {
     return (
-      <div className="bg-white/40 backdrop-blur-sm border-b border-stone-200/30 px-8 py-8">
+      <div className="bg-white border-b border-[#79797C] px-8 py-8">
         <div className="max-w-7xl mx-auto">
-          <div className="text-stone-600 font-light">Loading task...</div>
+          <div className="text-body text-[#79797C]">Loading task...</div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-slate-100/80 backdrop-blur-sm border-b border-slate-300/50 px-8 py-8">
+    <div className="bg-white border-b border-[#79797C] px-8 py-8">
       <div className="max-w-7xl mx-auto">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-6">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center">
-                <Target className="w-5 h-5 text-slate-700" />
+              <div className="w-10 h-10 rounded-full bg-[#C5AECF]/20 flex items-center justify-center">
+                <Target className="w-5 h-5 text-[#46295A]" />
               </div>
-              <h1 className="text-2xl font-light text-stone-800 tracking-wide">
+              <h1 className="text-title text-[#28282D]">
                 {task?.name || 'Unknown Task'}
               </h1>
             </div>
             
             <div className="flex items-center space-x-4">
-              <Badge className="bg-slate-600 text-slate-100 border-slate-600 font-light px-3 py-1">
+              <Badge className="bg-[#3073B7] text-white border-[#3073B7] text-body-sm px-3 py-1">
                 Active
               </Badge>
-              <Badge variant="outline" className="border-stone-300 text-stone-600 font-light px-3 py-1">
+              <Badge variant="outline" className="border-[#79797C] text-[#79797C] text-body-sm px-3 py-1">
                 {task?.type === 0 ? 'Backend' : task?.type === 1 ? 'Frontend' : task?.type === 2 ? 'Machine Learning' : `Type ${task?.type || 0}`}
               </Badge>
             </div>
           </div>
         </div>
         
-        <div className="mt-6 text-stone-600 font-light text-lg leading-relaxed max-w-4xl">
+        <div className="mt-6 text-body-lg text-[#79797C] max-w-4xl">
           <p>{task?.description || 'No description available.'}</p>
         </div>
       </div>

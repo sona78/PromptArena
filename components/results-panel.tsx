@@ -19,8 +19,8 @@ interface ResultsPanelProps {
 export function ResultsPanel({ result, isRunning }: ResultsPanelProps) {
   if (isRunning) {
     return (
-      <div className="bg-gray-900 border-t border-gray-800 p-4">
-        <div className="flex items-center space-x-2 text-blue-400">
+      <div className="bg-white border-t border-[#79797C] p-4">
+        <div className="flex items-center space-x-2 text-[#3073B7]">
           <Clock className="w-4 h-4 animate-spin" />
           <span className="text-sm font-medium">Executing code...</span>
         </div>
@@ -30,8 +30,8 @@ export function ResultsPanel({ result, isRunning }: ResultsPanelProps) {
 
   if (!result) {
     return (
-      <div className="bg-gray-900 border-t border-gray-800 p-4">
-        <div className="flex items-center space-x-2 text-gray-500">
+      <div className="bg-white border-t border-[#79797C] p-4">
+        <div className="flex items-center space-x-2 text-[#79797C]">
           <Terminal className="w-4 h-4" />
           <span className="text-sm">Click &quot;Test Prompt&quot; to run your code</span>
         </div>
@@ -40,20 +40,20 @@ export function ResultsPanel({ result, isRunning }: ResultsPanelProps) {
   }
 
   return (
-    <div className="bg-gray-900 border-t border-gray-800 p-4 space-y-3">
+    <div className="bg-white border-t border-gray-200 p-4 space-y-3">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-2">
           {result.success ? (
-            <CheckCircle className="w-4 h-4 text-emerald-400" />
+            <CheckCircle className="w-4 h-4 text-[#00656B]" />
           ) : (
-            <XCircle className="w-4 h-4 text-red-400" />
+            <XCircle className="w-4 h-4 text-[#953640]" />
           )}
-          <span className="text-sm font-medium text-gray-300">
+          <span className="text-sm font-medium text-[#28282D]">
             Execution {result.success ? 'Successful' : 'Failed'}
           </span>
           {result.execution_time && (
-            <Badge variant="outline" className="text-xs border-gray-600 text-gray-400">
+            <Badge variant="outline" className="text-xs border-[#79797C] text-[#79797C]">
               {result.execution_time.toFixed(2)}s
             </Badge>
           )}
@@ -62,12 +62,12 @@ export function ResultsPanel({ result, isRunning }: ResultsPanelProps) {
 
       {/* Output */}
       {result.output && (
-        <Card className="bg-gray-800 border-gray-700 p-3">
+        <Card className="bg-[#C5AECF]/5 border-[#C5AECF] p-3">
           <div className="flex items-center space-x-2 mb-2">
-            <Terminal className="w-3 h-3 text-emerald-400" />
-            <span className="text-xs font-medium text-gray-300">Output</span>
+            <Terminal className="w-3 h-3 text-[#00656B]" />
+            <span className="text-xs font-medium text-[#28282D]">Output</span>
           </div>
-          <pre className="text-xs text-gray-100 whitespace-pre-wrap font-mono overflow-x-auto">
+          <pre className="text-xs text-[#28282D] whitespace-pre-wrap font-mono overflow-x-auto">
             {result.output}
           </pre>
         </Card>
@@ -75,12 +75,12 @@ export function ResultsPanel({ result, isRunning }: ResultsPanelProps) {
 
       {/* Error */}
       {result.error && (
-        <Card className="bg-red-950/20 border-red-800/50 p-3">
+        <Card className="bg-[#953640]/5 border-[#953640] p-3">
           <div className="flex items-center space-x-2 mb-2">
-            <XCircle className="w-3 h-3 text-red-400" />
-            <span className="text-xs font-medium text-red-300">Error</span>
+            <XCircle className="w-3 h-3 text-[#953640]" />
+            <span className="text-xs font-medium text-[#953640]">Error</span>
           </div>
-          <pre className="text-xs text-red-200 whitespace-pre-wrap font-mono overflow-x-auto">
+          <pre className="text-xs text-[#953640] whitespace-pre-wrap font-mono overflow-x-auto">
             {result.error}
           </pre>
         </Card>

@@ -179,17 +179,17 @@ export default function DashboardPage() {
             Type {task.type}
           </Badge>
         </div>
-        <CardTitle className="text-gray-900 text-base font-medium line-clamp-2">
+        <CardTitle className="text-subtitle text-gray-900 line-clamp-2">
           {task.name}
         </CardTitle>
-        <p className="text-sm text-gray-600 line-clamp-3 mt-2">
+        <p className="text-body-sm text-gray-600 line-clamp-3 mt-2">
           {task.description}
         </p>
       </CardHeader>
 
       <CardContent className="p-4 pt-0">
         <Button
-          className="w-full bg-gray-900 hover:bg-gray-800 text-white text-sm"
+          className="w-full bg-gray-900 hover:bg-gray-800 text-white text-body-sm"
           onClick={() => handleStartTask(task.task_id)}
           disabled={startingTask === task.task_id}
         >
@@ -209,7 +209,7 @@ export default function DashboardPage() {
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center space-x-3">
             <IconComponent className="w-6 h-6 text-gray-700" />
-            <h2 className="text-xl font-semibold text-gray-900 tracking-wide">
+            <h2 className="text-subtitle-lg text-gray-900">
               {category.title}
             </h2>
           </div>
@@ -226,7 +226,7 @@ export default function DashboardPage() {
         </div>
 
         {filteredTasks.length === 0 ? (
-          <div className="text-center py-12 text-gray-500">
+          <div className="text-center py-12 text-body text-gray-500">
             {searchQuery ? `No challenges found matching "${searchQuery}"` : "No challenges available in this category"}
           </div>
         ) : (
@@ -260,13 +260,13 @@ export default function DashboardPage() {
         {/* Main Content */}
         <div className="max-w-7xl mx-auto px-6 py-8">
           <div className="mb-8">
-            <h1 className="text-3xl font-semibold text-gray-900 mb-2">CHALLENGES</h1>
-            <p className="text-gray-600">Test your prompt engineering skills with these organized challenges.</p>
+            <h1 className="text-title-lg text-gray-900 mb-2">CHALLENGES</h1>
+            <p className="text-body-lg text-gray-600">Test your prompt engineering skills with these organized challenges.</p>
           </div>
 
           {loading ? (
             <div className="flex items-center justify-center min-h-64">
-              <div className="text-gray-500">Loading challenges...</div>
+              <div className="text-body text-gray-500">Loading challenges...</div>
             </div>
           ) : (
             <div className="space-y-8">
