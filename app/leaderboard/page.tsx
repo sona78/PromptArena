@@ -2,7 +2,9 @@
 
 import { AuthGuard } from "@/components/auth-guard";
 import { JapandiLayout } from "@/components/japandi-layout";
-import { Card, CardContent } from "@/components/ui/card";
+import { Navigation } from "@/components/navigation";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -10,8 +12,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ChevronDown, Trophy, Medal, Award } from "lucide-react";
+import { ChevronDown, Trophy, Medal, Award, Settings } from "lucide-react";
 import { useState } from "react";
+import Link from "next/link";
 
 interface LeaderboardEntry {
   rank: number;
@@ -106,81 +109,61 @@ export default function LeaderboardPage() {
 
   return (
     <AuthGuard>
-      <JapandiLayout
-        title="Leaderboard"
-        subtitle="Discover the most skilled prompt engineers in our community. Excellence through mindful practice."
-      >
-        <div className="space-y-12">
+      <div className="min-h-screen bg-white">
+        <Navigation />
+
+        <div className="max-w-7xl mx-auto px-6 py-8">
+          <div className="mb-8">
+            <h1 className="text-3xl font-semibold text-gray-900 mb-2">Leaderboard</h1>
+            <p className="text-gray-600">Top performing prompt engineers in our community.</p>
+          </div>
+
           {/* Filter Dropdowns */}
-          <Card className="bg-white border-0 shadow-sm rounded-3xl overflow-hidden">
-            <CardContent className="p-10">
-              <div className="flex flex-wrap gap-6 justify-center">
-                {/* Model Dropdown */}
+          <Card className="bg-white border border-gray-200 mb-6">
+            <CardContent className="p-6">
+              <div className="flex flex-wrap gap-4 justify-center">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="min-w-[180px] justify-between bg-stone-50 border-stone-200 text-stone-700 font-light rounded-xl py-6 hover:bg-stone-100 transition-colors duration-300"
-                    >
+                    <Button variant="outline" className="min-w-[160px] justify-between">
                       {selectedModel}
                       <ChevronDown className="w-4 h-4" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent className="bg-white border-stone-200 rounded-xl shadow-lg">
+                  <DropdownMenuContent>
                     {models.map((model) => (
-                      <DropdownMenuItem
-                        key={model}
-                        onClick={() => setSelectedModel(model)}
-                        className="text-stone-700 hover:bg-stone-50 font-light"
-                      >
+                      <DropdownMenuItem key={model} onClick={() => setSelectedModel(model)}>
                         {model}
                       </DropdownMenuItem>
                     ))}
                   </DropdownMenuContent>
                 </DropdownMenu>
 
-                {/* Question Category Dropdown */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="min-w-[180px] justify-between bg-stone-50 border-stone-200 text-stone-700 font-light rounded-xl py-6 hover:bg-stone-100 transition-colors duration-300"
-                    >
+                    <Button variant="outline" className="min-w-[160px] justify-between">
                       {selectedCategory}
                       <ChevronDown className="w-4 h-4" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent className="bg-white border-stone-200 rounded-xl shadow-lg">
+                  <DropdownMenuContent>
                     {categories.map((category) => (
-                      <DropdownMenuItem
-                        key={category}
-                        onClick={() => setSelectedCategory(category)}
-                        className="text-stone-700 hover:bg-stone-50 font-light"
-                      >
+                      <DropdownMenuItem key={category} onClick={() => setSelectedCategory(category)}>
                         {category}
                       </DropdownMenuItem>
                     ))}
                   </DropdownMenuContent>
                 </DropdownMenu>
 
-                {/* Metric Dropdown */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="min-w-[180px] justify-between bg-stone-50 border-stone-200 text-stone-700 font-light rounded-xl py-6 hover:bg-stone-100 transition-colors duration-300"
-                    >
+                    <Button variant="outline" className="min-w-[160px] justify-between">
                       {selectedMetric}
                       <ChevronDown className="w-4 h-4" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent className="bg-white border-stone-200 rounded-xl shadow-lg">
+                  <DropdownMenuContent>
                     {metrics.map((metric) => (
-                      <DropdownMenuItem
-                        key={metric}
-                        onClick={() => setSelectedMetric(metric)}
-                        className="text-stone-700 hover:bg-stone-50 font-light"
-                      >
+                      <DropdownMenuItem key={metric} onClick={() => setSelectedMetric(metric)}>
                         {metric}
                       </DropdownMenuItem>
                     ))}
@@ -191,11 +174,11 @@ export default function LeaderboardPage() {
           </Card>
 
           {/* Leaderboard Table */}
-          <Card className="bg-white border-0 shadow-sm rounded-3xl overflow-hidden">
+          <Card className="bg-white border border-gray-200">
             <CardContent className="p-0">
               <div className="overflow-hidden">
-                <div className="bg-stone-50 px-10 py-6 border-b border-stone-200">
-                  <div className="grid grid-cols-6 gap-4 text-sm font-light text-stone-600 tracking-wide">
+                <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
+                  <div className="grid grid-cols-6 gap-4 text-sm font-medium text-gray-700">
                     <div className="text-left">Rank</div>
                     <div className="text-left">Username</div>
                     <div className="text-center">Verbiage Score</div>
@@ -205,38 +188,30 @@ export default function LeaderboardPage() {
                   </div>
                 </div>
                 
-                <div className="divide-y divide-stone-100">
+                <div className="divide-y divide-gray-100">
                   {mockLeaderboardData.map((entry, index) => (
                     <div
                       key={entry.username}
-                      className={`grid grid-cols-6 gap-4 px-10 py-6 text-sm hover:bg-stone-50/50 transition-colors duration-300 ${
-                        index < 3 ? 'bg-stone-50/30' : 'bg-white'
+                      className={`grid grid-cols-6 gap-4 px-6 py-4 text-sm hover:bg-gray-50 ${
+                        index < 3 ? 'bg-blue-50/30' : 'bg-white'
                       }`}
                     >
                       <div className="flex items-center space-x-3">
                         {getRankIcon(entry.rank)}
-                        <span className="font-light text-stone-700">
-                          #{entry.rank}
+                        <span className="text-gray-700">#{entry.rank}</span>
+                      </div>
+                      <div className="text-gray-900 font-medium">{entry.username}</div>
+                      <div className="text-center">
+                        <span className={getPercentileColor(entry.verbiageScore)}>
+                          {entry.verbiageScore}%
                         </span>
                       </div>
-                      <div className="font-light text-stone-800">
-                        {entry.username}
-                      </div>
+                      <div className="text-center text-gray-700">{entry.numPrompts}</div>
+                      <div className="text-center text-gray-700">{entry.tokenInput.toLocaleString()}</div>
                       <div className="text-center">
-                        <div className={`font-light ${getPercentileColor(entry.verbiageScore)}`}>
-                          {entry.verbiageScore}%
-                        </div>
-                      </div>
-                      <div className="text-center font-light text-stone-700">
-                        {entry.numPrompts}
-                      </div>
-                      <div className="text-center font-light text-stone-700">
-                        {entry.tokenInput.toLocaleString()}
-                      </div>
-                      <div className="text-center">
-                        <div className={`font-light ${getPercentileColor(entry.codePerformance)}`}>
+                        <span className={getPercentileColor(entry.codePerformance)}>
                           {entry.codePerformance}%
-                        </div>
+                        </span>
                       </div>
                     </div>
                   ))}
@@ -245,7 +220,7 @@ export default function LeaderboardPage() {
             </CardContent>
           </Card>
         </div>
-      </JapandiLayout>
+      </div>
     </AuthGuard>
   );
 }

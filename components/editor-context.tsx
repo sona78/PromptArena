@@ -286,19 +286,34 @@ export function EditorProvider({ children }: { children: ReactNode }) {
             .eq('session_id', sessionId)
             .single();
 
+          console.log('Session data:', session);
+          console.log('Session error:', sessionError);
+          console.log('Prompts:', session?.prompts);
+          
+          // Use session prompts if available, otherwise use a single-item array with placeholder
+          let promptsToEvaluate = [];
           if (!sessionError && session?.prompts && session.prompts.length > 0) {
-            const response = await fetch('/api/evaluate-prompts', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                prompts: session.prompts
-              }),
-            });
-            return await response.json();
+            promptsToEvaluate = session.prompts;
+            console.log('Using session prompts for evaluation:', promptsToEvaluate);
+          } else {
+            // Use a placeholder prompt for single prompt evaluation
+            promptsToEvaluate = ["Generate code based on the given requirements"];
+            console.log('Using single placeholder prompt for evaluation:', promptsToEvaluate);
           }
-          return { success: false };
+          
+          console.log('Calling prompt evaluation API with prompts:', promptsToEvaluate);
+          const response = await fetch('/api/evaluate-prompts', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              prompts: promptsToEvaluate
+            }),
+          });
+          const result = await response.json();
+          console.log('Prompt evaluation result:', result);
+          return result;
         } catch (error) {
           console.error('Prompt evaluation error:', error);
           return { success: false };

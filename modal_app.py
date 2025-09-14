@@ -165,6 +165,7 @@ def _execute_python_multi_file(files: Dict[str, str], entry_point: str) -> Dict[
                 "help": help,
                 "__import__": __import__,
                 "input": lambda prompt="": "",
+                "open": open,
                 "ValueError": ValueError,
                 "TypeError": TypeError,
                 "KeyError": KeyError,
@@ -218,7 +219,12 @@ def _execute_python_multi_file(files: Dict[str, str], entry_point: str) -> Dict[
             return result
         
         entry_code = files.get(entry_point, files.get(entry_file.replace('.py', '')))
-        exec(entry_code, safe_globals)
+        
+        # Flatten builtins to make them directly accessible
+        flattened_globals = safe_globals.copy()
+        flattened_globals.update(safe_globals["__builtins__"])
+        
+        exec(entry_code, flattened_globals)
         
         result["output"] = stdout_capture.getvalue()
         error_output = stderr_capture.getvalue()

@@ -84,7 +84,7 @@ export function CodeEditor() {
               <span className="text-xs text-blue-400 animate-pulse" title="Auto-saving...">💾</span>
             )}
           </div>
-
+          If it was HTML code, we can directly just put it into an iframe. Yeah, into an iframe, so we can just do that for front-end. Let's get the front-end example there, and then yeah, but I guess like you guys want to set this up because I'm not sure how to tell when we click the button what type of task is because only if it's a front-end task do we want to do the iframe. 
           {activeFile && (
             <Badge variant="outline" className="text-xs border-gray-600 text-gray-400">
               {activeFile.language.toUpperCase()}
@@ -120,7 +120,7 @@ export function CodeEditor() {
           <Button
             variant="ghost"
             size="sm"
-            className="text-gray-400 hover:text-white hover:bg-gray-800"
+            className="monaco-text-muted hover:monaco-text hover:bg-secondary/50"
           >
             <Copy className="w-4 h-4" />
           </Button>
@@ -128,7 +128,7 @@ export function CodeEditor() {
           <Button
             variant="ghost"
             size="sm"
-            className="text-gray-400 hover:text-white hover:bg-gray-800"
+            className="monaco-text-muted hover:monaco-text hover:bg-secondary/50"
             onClick={handleReset}
             disabled={isLoading}
           >
@@ -163,7 +163,7 @@ export function CodeEditor() {
             defaultLanguage={activeFile ? getMonacoLanguage(activeFile.language) : 'plaintext'}
             value={code}
             onChange={(value) => setCode(value || '')}
-            theme="vs-dark"
+            theme="light"
             options={{
               minimap: { enabled: false },
               fontSize: 14,
