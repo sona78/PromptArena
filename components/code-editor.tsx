@@ -86,7 +86,7 @@ export function CodeEditor() {
               <span className="text-xs text-blue-400 animate-pulse" title="Auto-saving...">💾</span>
             )}
           </div>
-
+          If it was HTML code, we can directly just put it into an iframe. Yeah, into an iframe, so we can just do that for front-end. Let's get the front-end example there, and then yeah, but I guess like you guys want to set this up because I'm not sure how to tell when we click the button what type of task is because only if it's a front-end task do we want to do the iframe. 
           {activeFile && (
             <Badge variant="outline" className="text-xs border-gray-600 text-gray-400">
               {activeFile.language.toUpperCase()}
