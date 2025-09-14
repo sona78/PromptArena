@@ -4,13 +4,14 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { AuthGuard } from "@/components/auth-guard";
 import { Navigation } from "@/components/navigation";
+import { FileUpload } from "@/components/ui/file-upload";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Trophy, Settings, Upload, FileText, Code, Target } from "lucide-react";
+import { Trophy, Settings, Upload, Code, Target } from "lucide-react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 
@@ -21,16 +22,15 @@ export default function CreateTaskPage() {
     name: "",
     description: "",
     type: 0,
-    criteria: "",
-    entry_file: "",
-    test_file: ""
+    test_file_name: ""
   });
+  const [challengeFiles, setChallengeFiles] = useState<File[]>([]);
+  const [fileStructure, setFileStructure] = useState<Record<string, string>>({});
 
   const taskTypes = [
-    { value: 0, label: "Code Generation", description: "Generate code based on requirements" },
-    { value: 1, label: "Text Processing", description: "Process and analyze text content" },
-    { value: 2, label: "Problem Solving", description: "Solve algorithmic or logical problems" },
-    { value: 3, label: "Creative Writing", description: "Generate creative content" }
+    { value: 0, label: "Frontend", description: "Build user interfaces, components, and client-side applications" },
+    { value: 1, label: "Backend", description: "Create APIs, databases, and server-side logic" },
+    { value: 2, label: "ML", description: "Machine learning, data analysis, and AI model development" }
   ];
 
   const handleInputChange = (field: string, value: string | number) => {
@@ -40,17 +40,29 @@ export default function CreateTaskPage() {
     }));
   };
 
+  const handleFolderSelect = (files: File[], structure: Record<string, string>) => {
+    setChallengeFiles(files);
+    setFileStructure(structure);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
+      // Prepare the data with file structure
+      const submitData = {
+        ...formData,
+        file_structure: fileStructure,
+        has_files: challengeFiles.length > 0
+      };
+
       const response = await fetch('/api/tasks', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(submitData),
       });
 
       const result = await response.json();
@@ -139,65 +151,69 @@ export default function CreateTaskPage() {
               </CardContent>
             </Card>
 
-            <Card className="bg-white border border-gray-200">
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <FileText className="w-5 h-5" />
-                  <span>Evaluation Criteria</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="criteria">Judging Criteria</Label>
-                  <Textarea
-                    id="criteria"
-                    value={formData.criteria}
-                    onChange={(e) => handleInputChange('criteria', e.target.value)}
-                    placeholder="Describe how submissions will be evaluated (e.g., correctness, efficiency, creativity)"
-                    rows={3}
-                    className="mt-1"
-                  />
-                </div>
-              </CardContent>
-            </Card>
 
             <Card className="bg-white border border-gray-200">
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
                   <Code className="w-5 h-5" />
-                  <span>Technical Details</span>
+                  <span>Challenge Files</span>
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <Label htmlFor="entry_file">Entry File Name</Label>
-                  <Input
-                    id="entry_file"
-                    type="text"
-                    value={formData.entry_file}
-                    onChange={(e) => handleInputChange('entry_file', e.target.value)}
-                    placeholder="e.g., main.py, solution.js (optional)"
-                    className="mt-1"
-                  />
+                  <Label htmlFor="challenge_folder">Challenge Folder</Label>
+                  <div className="mt-1">
+                    <FileUpload
+                      onFolderSelect={handleFolderSelect}
+                      placeholder="Drag and drop your entire challenge folder here, or click to browse"
+                      accept={{
+                        'text/*': ['.py', '.js', '.ts', '.txt', '.json', '.md', '.yml', '.yaml'],
+                        'application/json': ['.json']
+                      }}
+                      allowFolders={true}
+                    />
+                  </div>
                   <p className="text-sm text-gray-500 mt-1">
-                    The default file name participants should use for their solution
+                    Upload your complete challenge folder including test files, starter code, and any supporting files
                   </p>
                 </div>
 
+
                 <div>
-                  <Label htmlFor="test_file">Test File Content</Label>
-                  <Textarea
-                    id="test_file"
-                    value={formData.test_file}
-                    onChange={(e) => handleInputChange('test_file', e.target.value)}
-                    placeholder="Enter test cases or validation logic"
-                    rows={6}
+                  <Label htmlFor="test_file_name">Test File Name</Label>
+                  <Input
+                    id="test_file_name"
+                    type="text"
+                    value={formData.test_file_name}
+                    onChange={(e) => handleInputChange('test_file_name', e.target.value)}
+                    placeholder="e.g., test.py, test_cases.js, tests/test_main.py"
                     className="mt-1"
                   />
                   <p className="text-sm text-gray-500 mt-1">
-                    Test cases or validation code to evaluate submissions
+                    The path to the test file within your uploaded folder
                   </p>
                 </div>
+
+                {/* Show available files if folder is uploaded */}
+                {challengeFiles.length > 0 && (
+                  <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <h4 className="text-sm font-medium text-blue-900 mb-2">Available files in your folder:</h4>
+                    <div className="text-xs text-blue-700 space-y-1 max-h-32 overflow-y-auto">
+                      {Object.keys(fileStructure).map((filePath, index) => (
+                        <div key={index} className="flex justify-between">
+                          <span>{filePath}</span>
+                          <button
+                            type="button"
+                            onClick={() => handleInputChange('test_file_name', filePath)}
+                            className="text-blue-600 hover:text-blue-800 underline ml-2"
+                          >
+                            Use as test file
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -212,7 +228,7 @@ export default function CreateTaskPage() {
               </Button>
               <Button
                 type="submit"
-                disabled={loading || !formData.name || !formData.description}
+                disabled={loading || !formData.name || !formData.description || (challengeFiles.length > 0 && !formData.test_file_name)}
                 className="bg-gray-900 hover:bg-gray-800 text-white"
               >
                 {loading ? "Creating..." : "Create Task"}

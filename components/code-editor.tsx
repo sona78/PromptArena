@@ -84,7 +84,6 @@ export function CodeEditor() {
               <span className="text-xs text-blue-400 animate-pulse" title="Auto-saving...">💾</span>
             )}
           </div>
-          If it was HTML code, we can directly just put it into an iframe. Yeah, into an iframe, so we can just do that for front-end. Let's get the front-end example there, and then yeah, but I guess like you guys want to set this up because I'm not sure how to tell when we click the button what type of task is because only if it's a front-end task do we want to do the iframe. 
           {activeFile && (
             <Badge variant="outline" className="text-xs border-gray-600 text-gray-400">
               {activeFile.language.toUpperCase()}
@@ -149,41 +148,31 @@ export function CodeEditor() {
 
       {/* Monaco Editor */}
       <div className="flex-1 min-h-0 overflow-hidden">
-        {!activeFile && !code ? (
-          <div className="h-full flex items-center justify-center">
-            <div className="text-center text-gray-500">
-              <FileText className="w-16 h-16 mx-auto mb-4 text-gray-600" />
-              <h3 className="text-lg font-medium text-gray-400 mb-2">No file selected</h3>
-              <p className="text-sm">Select a file from the sidebar to start editing</p>
-            </div>
-          </div>
-        ) : (
-          <Editor
-            height="100%"
-            defaultLanguage={activeFile ? getMonacoLanguage(activeFile.language) : 'plaintext'}
-            value={code}
-            onChange={(value) => setCode(value || '')}
-            theme="light"
-            options={{
-              minimap: { enabled: false },
-              fontSize: 14,
-              lineNumbers: 'on',
-              scrollBeyondLastLine: false,
-              automaticLayout: true,
-              tabSize: 2,
-              wordWrap: 'on',
-              padding: { top: 16, bottom: 16 },
-              fontFamily: 'JetBrains Mono, Consolas, Monaco, monospace',
-              renderLineHighlight: 'gutter',
-              selectOnLineNumbers: true,
-              matchBrackets: 'always',
-              autoIndent: 'full',
-              formatOnPaste: true,
-              formatOnType: true,
-              readOnly: isLoading,
-            }}
-          />
-        )}
+        <Editor
+          height="100%"
+          defaultLanguage={activeFile ? getMonacoLanguage(activeFile.language) : 'python'}
+          value={code || '# Write your code here\n'}
+          onChange={(value) => setCode(value || '')}
+          theme="light"
+          options={{
+            minimap: { enabled: false },
+            fontSize: 14,
+            lineNumbers: 'on',
+            scrollBeyondLastLine: false,
+            automaticLayout: true,
+            tabSize: 2,
+            wordWrap: 'on',
+            padding: { top: 16, bottom: 16 },
+            fontFamily: 'JetBrains Mono, Consolas, Monaco, monospace',
+            renderLineHighlight: 'gutter',
+            selectOnLineNumbers: true,
+            matchBrackets: 'always',
+            autoIndent: 'full',
+            formatOnPaste: true,
+            formatOnType: true,
+            readOnly: isLoading,
+          }}
+        />
       </div>
 
       {/* Status Bar */}
