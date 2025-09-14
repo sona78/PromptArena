@@ -5,17 +5,19 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { 
-  MessageSquare, 
-  Send, 
-  Sparkles, 
-  Brain, 
-  TrendingUp, 
+import {
+  MessageSquare,
+  Send,
+  Sparkles,
+  Brain,
+  TrendingUp,
   Users,
   Star,
-  Clock
+  Clock,
+  History
 } from "lucide-react";
 import { useEditor } from "./editor-context";
+import { InfiniteScrollContainer } from "./infinite-scroll-container";
 
 export function PromptPanel() {
   const [prompt, setPrompt] = useState('');
@@ -153,8 +155,34 @@ Please check your internet connection and try again.`);
     }
   };
 
+  // Mock data fetcher for prompt history
+  const fetchPromptHistory = async (page: number, limit: number) => {
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 800));
+
+    // Mock data - in real app, this would fetch from Supabase
+    const allPrompts = Array.from({ length: 100 }, (_, i) => ({
+      id: i + 1,
+      prompt: `Example prompt ${i + 1}: Write a creative story about ${['dragons', 'robots', 'magic', 'space', 'time travel'][i % 5]}`,
+      score: Math.floor(Math.random() * 100) + 1,
+      timestamp: new Date(Date.now() - i * 1000 * 60 * 60),
+      status: ['pending', 'completed', 'failed'][i % 3]
+    }));
+
+    const startIndex = (page - 1) * limit;
+    const endIndex = startIndex + limit;
+    const pageData = allPrompts.slice(startIndex, endIndex);
+
+    return {
+      data: pageData,
+      hasMore: endIndex < allPrompts.length,
+      nextPage: page + 1
+    };
+  };
+
   const tabs = [
     { id: 'write', label: 'Write Prompt', icon: MessageSquare },
+    { id: 'history', label: 'History', icon: History },
     { id: 'analyze', label: 'Analysis', icon: Brain },
     { id: 'leaderboard', label: 'Rankings', icon: TrendingUp },
   ];
@@ -188,6 +216,59 @@ Please check your internet connection and try again.`);
 
       {/* Tab Content */}
       <div className="flex-1 overflow-y-auto">
+        {activeTab === 'history' && (
+          <div className="flex-1 overflow-hidden">
+            <InfiniteScrollContainer
+              fetchData={fetchPromptHistory}
+              renderItem={(item: any) => (
+                <Card className="bg-gray-900 border-gray-700 p-3 mx-4 mb-2">
+                  <div className="space-y-2">
+                    <div className="flex items-start justify-between">
+                      <p className="text-sm text-gray-300 flex-1 pr-2">
+                        {item.prompt}
+                      </p>
+                      <Badge
+                        variant="outline"
+                        className={`text-xs ${
+                          item.status === 'completed'
+                            ? 'border-green-600 text-green-400'
+                            : item.status === 'pending'
+                            ? 'border-yellow-600 text-yellow-400'
+                            : 'border-red-600 text-red-400'
+                        }`}
+                      >
+                        {item.status}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center justify-between text-xs text-gray-500">
+                      <div className="flex items-center space-x-2">
+                        <Clock className="w-3 h-3" />
+                        <span>{item.timestamp.toLocaleString()}</span>
+                      </div>
+                      {item.status === 'completed' && (
+                        <div className="flex items-center space-x-1">
+                          <Star className="w-3 h-3 text-yellow-400" />
+                          <span>{item.score}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </Card>
+              )}
+              renderEmpty={() => (
+                <div className="flex flex-col items-center justify-center h-full p-8 text-gray-400">
+                  <History className="w-12 h-12 mb-4 text-gray-600" />
+                  <h3 className="text-lg font-medium text-gray-300 mb-2">No prompt history</h3>
+                  <p className="text-sm text-center">Your submitted prompts will appear here</p>
+                </div>
+              )}
+              limit={10}
+              threshold={50}
+              className="h-full"
+            />
+          </div>
+        )}
+
         {activeTab === 'write' && (
           <div className="p-4 space-y-4">
             <div className="space-y-2">
@@ -297,57 +378,93 @@ Please check your internet connection and try again.`);
         )}
 
         {activeTab === 'leaderboard' && (
-          <div className="p-4 space-y-3">
-            <h3 className="text-sm font-medium text-gray-300 mb-3 flex items-center">
-              <Users className="w-4 h-4 mr-1" />
-              Top Prompters This Week
-            </h3>
-            
-            {[
-              { rank: 1, name: 'Sarah Chen', score: 94.2, badge: '👑' },
-              { rank: 2, name: 'Alex Rivera', score: 91.8, badge: '🥈' },
-              { rank: 3, name: 'Jordan Kim', score: 89.5, badge: '🥉' },
-              { rank: 4, name: 'You', score: 84.1, badge: '' },
-              { rank: 5, name: 'Maya Patel', score: 82.7, badge: '' },
-            ].map((user) => (
-              <Card
-                key={user.rank}
-                className={`bg-gray-900 border-gray-700 p-3 ${
-                  user.name === 'You' ? 'border-blue-500 bg-blue-950/20' : ''
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <span className="text-sm font-medium text-gray-400">
-                      #{user.rank}
-                    </span>
-                    <span className="text-sm text-gray-300">{user.name}</span>
-                    {user.badge && <span>{user.badge}</span>}
-                    {user.name === 'You' && (
-                      <Badge className="bg-blue-900 text-blue-200 text-xs">
-                        You
-                      </Badge>
-                    )}
-                  </div>
+          <div className="h-full flex flex-col">
+            <div className="p-4 border-b border-gray-800">
+              <h3 className="text-sm font-medium text-gray-300 mb-1 flex items-center">
+                <Users className="w-4 h-4 mr-1" />
+                Top Prompters This Week
+              </h3>
+              <Card className="bg-gray-900 border-gray-700 p-2 mt-2">
+                <div className="flex items-center justify-between text-xs text-gray-400">
                   <div className="flex items-center space-x-1">
-                    <Star className="w-3 h-3 text-yellow-400" />
-                    <span className="text-sm font-medium text-gray-300">
-                      {user.score}
-                    </span>
+                    <Clock className="w-3 h-3" />
+                    <span>Next reset:</span>
                   </div>
+                  <span>3d 14h 22m</span>
                 </div>
               </Card>
-            ))}
+            </div>
 
-            <Card className="bg-gray-900 border-gray-700 p-3 mt-4">
-              <div className="flex items-center justify-between text-xs text-gray-400">
-                <div className="flex items-center space-x-1">
-                  <Clock className="w-3 h-3" />
-                  <span>Next reset:</span>
-                </div>
-                <span>3d 14h 22m</span>
-              </div>
-            </Card>
+            <div className="flex-1 overflow-hidden">
+              <InfiniteScrollContainer
+                fetchData={async (page: number, limit: number) => {
+                  await new Promise(resolve => setTimeout(resolve, 600));
+
+                  const allUsers = Array.from({ length: 500 }, (_, i) => ({
+                    rank: i + 1,
+                    name: i === 3 ? 'You' : `User ${i + 1}`,
+                    score: Math.floor(Math.random() * 50) + 50 + (500 - i) * 0.1,
+                    badge: i === 0 ? '👑' : i === 1 ? '🥈' : i === 2 ? '🥉' : '',
+                    streak: Math.floor(Math.random() * 30) + 1,
+                    submissions: Math.floor(Math.random() * 100) + 10
+                  }));
+
+                  const startIndex = (page - 1) * limit;
+                  const endIndex = startIndex + limit;
+                  const pageData = allUsers.slice(startIndex, endIndex);
+
+                  return {
+                    data: pageData,
+                    hasMore: endIndex < allUsers.length
+                  };
+                }}
+                renderItem={(user: any) => (
+                  <Card
+                    className={`bg-gray-900 border-gray-700 p-3 mx-4 mb-2 ${
+                      user.name === 'You' ? 'border-blue-500 bg-blue-950/20' : ''
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <span className="text-sm font-medium text-gray-400 min-w-[32px]">
+                          #{user.rank}
+                        </span>
+                        <span className="text-sm text-gray-300">{user.name}</span>
+                        {user.badge && <span className="text-lg">{user.badge}</span>}
+                        {user.name === 'You' && (
+                          <Badge className="bg-blue-900 text-blue-200 text-xs">
+                            You
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="flex items-center space-x-3">
+                        <div className="text-right">
+                          <div className="flex items-center space-x-1">
+                            <Star className="w-3 h-3 text-yellow-400" />
+                            <span className="text-sm font-medium text-gray-300">
+                              {user.score.toFixed(1)}
+                            </span>
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {user.submissions} prompts
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
+                )}
+                renderEmpty={() => (
+                  <div className="flex flex-col items-center justify-center h-full p-8 text-gray-400">
+                    <TrendingUp className="w-12 h-12 mb-4 text-gray-600" />
+                    <h3 className="text-lg font-medium text-gray-300 mb-2">No rankings available</h3>
+                    <p className="text-sm text-center">Complete some prompts to see the leaderboard</p>
+                  </div>
+                )}
+                limit={20}
+                threshold={100}
+                className="h-full pt-2"
+              />
+            </div>
           </div>
         )}
       </div>

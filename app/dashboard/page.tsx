@@ -87,7 +87,7 @@ export default function DashboardPage() {
           });
 
         if (createError) {
-          console.error('Error creating session:', createError);
+       .emy secr   console.error('Error creating session:', createError);
           return;
         }
 
@@ -129,7 +129,12 @@ export default function DashboardPage() {
             </div>
 
             <div className="flex items-center space-x-1">
-              <Button variant="ghost" size="sm" className="text-gray-300 hover:text-white hover:bg-gray-800">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="text-gray-300 hover:text-white hover:bg-gray-800"
+                onClick={() => router.push('/leaderboard')}
+              >
                 <BarChart3 className="w-4 h-4 mr-2" />
                 Leaderboard
               </Button>

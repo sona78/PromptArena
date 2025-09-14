@@ -21,10 +21,12 @@ export function Navigation() {
           </Link>
           
           <div className="flex items-center space-x-1">
-            <Button variant="ghost" size="sm" className="text-gray-300 hover:text-white hover:bg-gray-800">
-              <BarChart3 className="w-4 h-4 mr-2" />
-              Leaderboard
-            </Button>
+            <Link href="/leaderboard">
+              <Button variant="ghost" size="sm" className="text-gray-300 hover:text-white hover:bg-gray-800">
+                <BarChart3 className="w-4 h-4 mr-2" />
+                Leaderboard
+              </Button>
+            </Link>
             <Button variant="ghost" size="sm" className="text-gray-300 hover:text-white hover:bg-gray-800">
               <Users className="w-4 h-4 mr-2" />
               Battles

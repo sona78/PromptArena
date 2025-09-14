@@ -70,9 +70,11 @@ export default function EditorPage() {
             <FileSystemSidebar sessionId={sessionId || ''} />
 
             {/* Monaco Code Editor */}
-            <div className="flex-1 border-r border-gray-800">
+            <div className="flex-1 border-r border-gray-800 flex flex-col min-h-0">
               <LanguageToggle />
-              <CodeEditor />
+              <div className="flex-1 min-h-0">
+                <CodeEditor />
+              </div>
             </div>
 
             {/* Right Panel - Prompt Writing */}
