@@ -68,9 +68,9 @@ print(greet('Python'))`;
   };
 
   return (
-    <div className="h-full flex flex-col bg-gray-950">
+    <div className="h-full flex flex-col bg-gray-950 overflow-hidden">
       {/* Editor Toolbar */}
-      <div className="bg-gray-900 border-b border-gray-800 px-4 py-2 flex items-center justify-between">
+      <div className="bg-gray-900 border-b border-gray-800 px-4 py-2 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center space-x-3">
           <div className="flex items-center space-x-2">
             <FileText className="w-4 h-4 text-gray-400" />
@@ -82,14 +82,14 @@ print(greet('Python'))`;
           <Badge variant="outline" className="text-xs border-gray-600 text-gray-400">
             {language === 'javascript' ? 'JavaScript' : 'Python'}
           </Badge>
-          
+
           {isLoading && (
             <Badge className="bg-blue-900 text-blue-200 text-xs animate-pulse">
               Generating...
             </Badge>
           )}
         </div>
-        
+
         <div className="flex items-center space-x-2">
           <Button
             variant="ghost"
@@ -98,7 +98,7 @@ print(greet('Python'))`;
           >
             <Copy className="w-4 h-4" />
           </Button>
-          
+
           <Button
             variant="ghost"
             size="sm"
@@ -108,7 +108,7 @@ print(greet('Python'))`;
           >
             <RotateCcw className="w-4 h-4" />
           </Button>
-          
+
           <Button
             size="sm"
             className="bg-emerald-600 hover:bg-emerald-700 text-white"
@@ -122,7 +122,7 @@ print(greet('Python'))`;
       </div>
 
       {/* Monaco Editor */}
-      <div className="flex-1">
+      <div className="flex-1 min-h-0 overflow-hidden">
         <Editor
           height="100%"
           defaultLanguage={language}
@@ -149,24 +149,26 @@ print(greet('Python'))`;
           }}
         />
       </div>
-      
+
       {/* Status Bar */}
-      <div className="bg-gray-900 border-t border-gray-800 px-4 py-2 flex items-center justify-between text-xs text-gray-400">
+      <div className="bg-gray-900 border-t border-gray-800 px-4 py-2 flex items-center justify-between text-xs text-gray-400 flex-shrink-0">
         <div className="flex items-center space-x-4">
           <span>Lines: {code.split('\n').length}</span>
           <span>Characters: {code.length}</span>
           <span>Words: {code.split(/\s+/).filter(word => word.length > 0).length}</span>
         </div>
-        
+
         <div className="flex items-center space-x-2">
           <Badge className="bg-gray-800 text-gray-300 text-xs">
             {language === 'javascript' ? 'JavaScript' : 'Python'}
           </Badge>
         </div>
       </div>
-      
+
       {/* Results Panel */}
-      <ResultsPanel result={executionResult} isRunning={isExecuting} />
+      <div className="flex-shrink-0">
+        <ResultsPanel result={executionResult} isRunning={isExecuting} />
+      </div>
     </div>
   );
 }

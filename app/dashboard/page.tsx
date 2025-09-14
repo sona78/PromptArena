@@ -87,7 +87,7 @@ export default function DashboardPage() {
           });
 
         if (createError) {
-          console.error('Error creating session:', createError);
+       .emy secr   console.error('Error creating session:', createError);
           return;
         }
 
