@@ -12,12 +12,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { 
-  ChevronDown, 
-  Brain, 
-  Lightbulb, 
-  TrendingUp, 
-  Users, 
+import {
+  ChevronDown,
+  Brain,
+  Lightbulb,
+  Users,
   Target,
   CheckCircle,
   ArrowRight,
@@ -139,7 +138,7 @@ export default function BestPracticesPage() {
 
   useEffect(() => {
     fetchBestPractices();
-  }, []);
+  }, []); // fetchBestPractices is defined inside the component and will cause infinite re-renders if added
 
   const fetchBestPractices = async () => {
     try {

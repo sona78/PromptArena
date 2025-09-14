@@ -69,6 +69,7 @@ export function Navigation({ showRank = true, className }: NavigationProps) {
         </div>
         
         <div className="flex items-center space-x-4">
+<<<<<<< HEAD
           {showRank && (
             <div className="hidden sm:flex items-center space-x-2 text-body-sm text-gray-500">
               <span>Rank</span>
@@ -81,6 +82,8 @@ export function Navigation({ showRank = true, className }: NavigationProps) {
           <button className="p-2 text-gray-500 hover:text-gray-700 transition-colors duration-200">
             <Settings className="w-4 h-4" />
           </button>
+=======
+>>>>>>> 2bcd745916ad362d9e238c0545a55984baf0f7ee
 
           <LogoutButton />
         </div>

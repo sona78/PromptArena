@@ -1,10 +1,8 @@
 "use client";
 
 import { AuthGuard } from "@/components/auth-guard";
-import { JapandiLayout } from "@/components/japandi-layout";
 import { Navigation } from "@/components/navigation";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -12,9 +10,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ChevronDown, Trophy, Medal, Award, Settings } from "lucide-react";
+import { ChevronDown, Trophy, Medal, Award } from "lucide-react";
 import { useState } from "react";
-import Link from "next/link";
 
 interface LeaderboardEntry {
   rank: number;

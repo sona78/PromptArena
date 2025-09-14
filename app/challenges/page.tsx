@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Target, Users, Trophy, Settings, BarChart3, ChevronLeft, ChevronRight, Search, Monitor, Server, Brain } from "lucide-react";
+import { Target, ChevronLeft, ChevronRight, Search, Monitor, Server, Brain } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { AuthGuard } from "@/components/auth-guard";
 import { Navigation } from "@/components/navigation";
@@ -37,6 +37,192 @@ export default function DashboardPage() {
     ml: ""
   });
   const router = useRouter();
+
+  // Recursive function to search for task ID folder in templates bucket
+  const findTaskTemplateFolder = async (taskId: string, currentPath: string = ''): Promise<string | null> => {
+    try {
+      const { data: items, error } = await supabase.storage
+        .from('Templates')
+        .list(currentPath, {
+          limit: 100,
+          offset: 0,
+        });
+
+      if (error) {
+        console.error(`Error listing path '${currentPath}':`, error);
+        return null;
+      }
+
+      if (!items || items.length === 0) {
+        return null;
+      }
+
+      // Check if current folder name matches task ID
+      const pathSegments = currentPath.split('/').filter(Boolean);
+      if (pathSegments.length > 0 && pathSegments[pathSegments.length - 1] === taskId) {
+        return currentPath;
+      }
+
+      // Check if any direct child folder matches task ID
+      for (const item of items) {
+        if (!item.metadata && item.name === taskId) {
+          // This is a folder and its name matches taskId
+          const foundPath = currentPath ? `${currentPath}/${item.name}` : item.name;
+          return foundPath;
+        }
+      }
+
+      // Recursively search in subfolders
+      for (const item of items) {
+        if (!item.metadata) { // This is a folder
+          const subPath = currentPath ? `${currentPath}/${item.name}` : item.name;
+          const result = await findTaskTemplateFolder(taskId, subPath);
+          if (result) {
+            return result;
+          }
+        }
+      }
+
+      return null;
+    } catch (error) {
+      console.error(`Error in findTaskTemplateFolder for path '${currentPath}':`, error);
+      return null;
+    }
+  };
+
+  // Recursive function to get all files from a folder
+  const getAllFilesFromFolder = async (folderPath: string): Promise<Array<{ path: string; name: string }>> => {
+    const allFiles: Array<{ path: string; name: string }> = [];
+
+    const collectFiles = async (currentPath: string): Promise<void> => {
+      try {
+        const { data: items, error } = await supabase.storage
+          .from('Templates')
+          .list(currentPath, {
+            limit: 100,
+            offset: 0,
+          });
+
+        if (error) {
+          console.error(`Error listing files in '${currentPath}':`, error);
+          return;
+        }
+
+        if (!items) return;
+
+        for (const item of items) {
+          const itemPath = currentPath ? `${currentPath}/${item.name}` : item.name;
+
+          if (item.metadata) {
+            // This is a file
+            allFiles.push({
+              path: itemPath,
+              name: item.name
+            });
+          } else {
+            // This is a folder, recurse into it
+            await collectFiles(itemPath);
+          }
+        }
+      } catch (error) {
+        console.error(`Error collecting files from '${currentPath}':`, error);
+      }
+    };
+
+    await collectFiles(folderPath);
+    return allFiles;
+  };
+
+  // Function to copy template files to session folder
+  const copyTemplateFiles = async (taskId: string, sessionId: string): Promise<{ success: boolean; filesCopied: number; message: string }> => {
+    try {
+      console.log(`Starting template copy for task ${taskId} to session ${sessionId}`);
+
+      // Step 1: Find the task template folder recursively
+      const templateFolderPath = await findTaskTemplateFolder(taskId);
+
+      if (!templateFolderPath) {
+        console.log(`No template folder found for task ${taskId}`);
+        return {
+          success: true,
+          filesCopied: 0,
+          message: `No template found for task ${taskId}`
+        };
+      }
+
+      console.log(`Found template folder at: ${templateFolderPath}`);
+
+      // Step 2: Get all files from the template folder recursively
+      const templateFiles = await getAllFilesFromFolder(templateFolderPath);
+
+      if (templateFiles.length === 0) {
+        console.log(`No files found in template folder ${templateFolderPath}`);
+        return {
+          success: true,
+          filesCopied: 0,
+          message: `Template folder found but no files to copy`
+        };
+      }
+
+      console.log(`Found ${templateFiles.length} files in template:`, templateFiles.map(f => f.path));
+
+      // Step 3: Copy each file to the session folder
+      let successCount = 0;
+
+      for (const file of templateFiles) {
+        try {
+          console.log(`Copying file: ${file.path}`);
+
+          // Download the file from templates bucket
+          const { data: fileData, error: downloadError } = await supabase.storage
+            .from('Templates')
+            .download(file.path);
+
+          if (downloadError) {
+            console.error(`Error downloading ${file.path}:`, downloadError);
+            continue;
+          }
+
+          // Calculate relative path within the template folder
+          const relativePath = file.path.replace(templateFolderPath + '/', '');
+          const destinationPath = `${sessionId}/${relativePath}`;
+
+          console.log(`Uploading to: ${destinationPath}`);
+
+          // Upload the file to sessions bucket
+          const { error: uploadError } = await supabase.storage
+            .from('Sessions')
+            .upload(destinationPath, fileData, {
+              cacheControl: '3600',
+              upsert: true // This will overwrite if file already exists
+            });
+
+          if (uploadError) {
+            console.error(`Error uploading ${destinationPath}:`, uploadError);
+          } else {
+            console.log(`Successfully copied: ${file.path} -> ${destinationPath}`);
+            successCount++;
+          }
+        } catch (error) {
+          console.error(`Error processing file ${file.path}:`, error);
+        }
+      }
+
+      return {
+        success: true,
+        filesCopied: successCount,
+        message: `Successfully copied ${successCount} out of ${templateFiles.length} files`
+      };
+
+    } catch (error) {
+      console.error('Copy template error:', error);
+      return {
+        success: false,
+        filesCopied: 0,
+        message: 'Failed to copy template files'
+      };
+    }
+  };
 
   const categories: CategoryConfig[] = [
     {
@@ -133,7 +319,6 @@ export default function DashboardPage() {
             task_id: taskId,
             prompts: [],
             feedback: [],
-            state: 0,
             score: 0
           });
 
@@ -142,20 +327,27 @@ export default function DashboardPage() {
           return;
         }
 
-        // Create folder in storage bucket with appropriate starter file
-        const task = tasks.find(t => t.task_id === taskId);
-        const shouldCreatePython = task && (task.type === 0 || task.type === 2);
+        // Try to copy template files for this task
+        const templateResult = await copyTemplateFiles(taskId, sessionId);
+        console.log(`Template copy result:`, templateResult);
 
-        const fileName = shouldCreatePython ? 'main.py' : '.keep';
-        const fileContent = shouldCreatePython ? '# Write your code here\n' : '';
+        // If no template files were found or copied, create a default starter file
+        if (templateResult.filesCopied === 0) {
+          const task = tasks.find(t => t.task_id === taskId);
+          const shouldCreatePython = task && (task.type === 0 || task.type === 2);
 
-        const { error: storageError } = await supabase.storage
-          .from('Sessions')
-          .upload(`${sessionId}/${fileName}`, new Blob([fileContent], { type: 'text/plain' }));
+          const fileName = shouldCreatePython ? 'main.py' : '.keep';
+          const fileContent = shouldCreatePython ? '# Write your code here\n' : '';
 
-        if (storageError) {
-          console.error('Error creating storage folder:', storageError);
-          // Don't return here as session was already created successfully
+          const { error: storageError } = await supabase.storage
+            .from('Sessions')
+            .upload(`${sessionId}/${fileName}`, new Blob([fileContent], { type: 'text/plain' }));
+
+          if (storageError) {
+            console.error('Error creating default starter file:', storageError);
+          } else {
+            console.log(`Created default starter file: ${fileName}`);
+          }
         }
       }
 
@@ -260,8 +452,13 @@ export default function DashboardPage() {
         {/* Main Content */}
         <div className="max-w-7xl mx-auto px-6 py-8">
           <div className="mb-8">
+<<<<<<< HEAD
             <h1 className="text-title-lg text-gray-900 mb-2">CHALLENGES</h1>
             <p className="text-body-lg text-gray-600">Test your prompt engineering skills with these organized challenges.</p>
+=======
+            <h1 className="text-3xl font-semibold text-gray-900 mb-2">Challenges</h1>
+            <p className="text-gray-600">Test your prompt engineering skills with these organized challenges.</p>
+>>>>>>> 2bcd745916ad362d9e238c0545a55984baf0f7ee
           </div>
 
           {loading ? (

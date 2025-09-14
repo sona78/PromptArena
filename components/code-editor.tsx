@@ -24,6 +24,8 @@ export function CodeEditor() {
     isExecuting,
     isSaving,
     hasUnsavedChanges,
+    taskType,
+    htmlOutput,
     executeMultiFile
   } = useEditor();
 
@@ -175,20 +177,47 @@ export function CodeEditor() {
         />
       </div>
 
-      {/* Status Bar */}
-      <div className="bg-[#C5AECF]/10 border-t border-[#79797C] px-4 py-2 flex items-center justify-between text-xs text-[#79797C] flex-shrink-0">
-        <div className="flex items-center space-x-4">
-          <span>Lines: {code.split('\n').length}</span>
-          <span>Characters: {code.length}</span>
-          <span>Words: {code.split(/\s+/).filter(word => word.length > 0).length}</span>
+      {/* HTML/CSS Preview for Type 1 Challenges */}
+      {taskType === 1 && htmlOutput && (
+        <div className="border-t border-[#79797C] bg-white">
+          <div className="px-4 py-2 bg-[#C5AECF]/10 border-b border-[#79797C] flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <div className="w-3 h-3 rounded-full bg-[#00656B]"></div>
+              <span className="text-sm font-medium text-[#28282D]">Live Preview</span>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-xs text-[#79797C] hover:text-[#28282D]"
+              onClick={() => window.open(`data:text/html,${encodeURIComponent(htmlOutput)}`, '_blank')}
+            >
+              Open in New Tab
+            </Button>
+          </div>
+          <div className="h-96 overflow-hidden">
+            <iframe
+              srcDoc={htmlOutput}
+              className="w-full h-full border-0"
+              sandbox="allow-scripts allow-same-origin"
+              title="HTML/CSS Preview"
+            />
+          </div>
         </div>
+      )}
 
-        <div className="flex items-center space-x-2">
+      {/* Status Bar */}
+      <div className="bg-[#C5AECF]/10 border-t border-[#79797C] px-4 py-2 flex items-center justify-between text-xs text-[#79797C]">
+        <div className="flex items-center space-x-4">
+          <span>Ready</span>
           {activeFile && (
-            <Badge className="bg-[#C5AECF]/20 text-[#28282D] text-xs">
-              {activeFile.language.charAt(0).toUpperCase() + activeFile.language.slice(1)}
-            </Badge>
+            <span>Language: {activeFile.language}</span>
           )}
+          {taskType === 1 && htmlOutput && (
+            <span className="text-[#00656B]">• Live Preview Active</span>
+          )}
+        </div>
+        <div className="flex items-center space-x-2">
+          <span>Ln 1, Col 1</span>
         </div>
       </div>
 

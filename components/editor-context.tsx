@@ -40,6 +40,8 @@ interface EditorContextType {
   setPromptQualityScore: (score: number) => void;
   promptMetrics: Record<string, unknown> | null;
   setPromptMetrics: (metrics: Record<string, unknown> | null) => void;
+  taskType: number | null;
+  htmlOutput: string | null;
   codeEvaluationScore: number | null;
   setCodeEvaluationScore: (score: number | null) => void;
   promptChainingScore: number | null;
@@ -80,10 +82,14 @@ export function EditorProvider({ children }: { children: ReactNode }) {
   const [isSaving, setIsSaving] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [promptQualityScore, setPromptQualityScore] = useState(8.4);
-  const [promptMetrics, setPromptMetrics] = useState(null);
+  const [promptMetrics, setPromptMetrics] = useState<Record<string, unknown> | null>(null);
   const [codeEvaluationScore, setCodeEvaluationScore] = useState<number | null>(null);
   const [promptChainingScore, setPromptChainingScore] = useState<number | null>(null);
   const [codeAccuracyScore, setCodeAccuracyScore] = useState<number | null>(null);
+  const [taskType, setTaskType] = useState<number | null>(null);
+  const [htmlOutput, setHtmlOutput] = useState<string | null>(null);
+
+  // Note: Persistent scores are now updated via the existing saveFeedbackToDatabase function in prompt-panel.tsx
 
   const setLanguage = (newLanguage: 'javascript' | 'python') => {
     if (!activeFile) {
@@ -208,19 +214,52 @@ export function EditorProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const executeMultiFile = async (sessionId: string, entryPoint: string = 'test') => {
+  const executeMultiFile = async (sessionId: string, entryPoint?: string) => {
     setIsExecuting(true);
     setExecutionResult(null);
-    
+    setHtmlOutput(null);
+
     try {
-      // Get all files in the session
+      // First, fetch the task type to determine execution method
+      const { data: session, error: sessionError } = await supabase
+        .from('Sessions')
+        .select('task_id')
+        .eq('session_id', sessionId)
+        .single();
+
+      if (sessionError || !session) {
+        setExecutionResult({
+          success: false,
+          output: '',
+          error: 'Failed to fetch session information'
+        });
+        return;
+      }
+
+      const { data: taskData, error: taskError } = await supabase
+        .from('Tasks')
+        .select('type')
+        .eq('task_id', session.task_id)
+        .single();
+
+      if (taskError || !taskData) {
+        setExecutionResult({
+          success: false,
+          output: '',
+          error: 'Failed to fetch task information'
+        });
+        return;
+      }
+
+      setTaskType(taskData.type);
+
       const files = await getAllFiles(sessionId);
       
       if (Object.keys(files).length === 0) {
         setExecutionResult({
           success: false,
           output: '',
-          error: 'No files found in the session'
+          error: 'No files found to execute'
         });
         return;
       }
@@ -233,34 +272,74 @@ export function EditorProvider({ children }: { children: ReactNode }) {
         detectedLanguage = 'javascript';
       }
 
-      // Find entry point file
-      let actualEntryPoint = entryPoint;
-      if (!files[entryPoint]) {
-        // Try common entry point names
-        const commonEntryPoints = ['test.py','main.py', 'index.js', 'app.py', 'main.js'];
-        const foundEntryPoint = commonEntryPoints.find(ep => files[ep]);
-        if (foundEntryPoint) {
-          actualEntryPoint = foundEntryPoint;
+      // Handle type 1 challenges (HTML/CSS) differently
+      if (taskData.type === 1) {
+        // For HTML/CSS challenges, render in iframe instead of executing via Modal
+        const htmlFile = Object.keys(files).find(name => name.endsWith('.html'));
+        const cssFile = Object.keys(files).find(name => name.endsWith('.css'));
+        
+        if (htmlFile) {
+          let htmlContent = files[htmlFile];
+          
+          // If there's a CSS file, inject it into the HTML
+          if (cssFile) {
+            const cssContent = files[cssFile];
+            const styleTag = `<style>${cssContent}</style>`;
+            
+            // Try to inject before closing head tag, or at the beginning if no head
+            if (htmlContent.includes('</head>')) {
+              htmlContent = htmlContent.replace('</head>', `${styleTag}</head>`);
+            } else if (htmlContent.includes('<head>')) {
+              htmlContent = htmlContent.replace('<head>', `<head>${styleTag}`);
+            } else {
+              htmlContent = `${styleTag}${htmlContent}`;
+            }
+          }
+          
+          setHtmlOutput(htmlContent);
+          setExecutionResult({
+            success: true,
+            output: 'HTML/CSS rendered successfully',
+            error: ''
+          });
         } else {
-          // Use the first file as entry point
-          actualEntryPoint = fileNames[0];
+          setExecutionResult({
+            success: false,
+            output: '',
+            error: 'No HTML file found for rendering'
+          });
         }
+      } else {
+        // For non-HTML challenges, use Modal execution
+        // Find entry point file
+        let actualEntryPoint = entryPoint;
+        if (!entryPoint || !files[entryPoint]) {
+          // Try common entry point names
+          const commonEntryPoints = ['test.py','main.py', 'index.js', 'app.py', 'main.js'];
+          const foundEntryPoint = commonEntryPoints.find(ep => files[ep]);
+          if (foundEntryPoint) {
+            actualEntryPoint = foundEntryPoint;
+          } else {
+            // Use the first file as entry point
+            actualEntryPoint = fileNames[0];
+          }
+        }
+
+        const response = await fetch('/api/execute-multi-file', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            files: files,
+            language: detectedLanguage,
+            entry_point: actualEntryPoint
+          }),
+        });
+
+        const result = await response.json();
+        setExecutionResult(result);
       }
-
-      const response = await fetch('/api/execute-multi-file', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          files: files,
-          language: detectedLanguage,
-          entry_point: actualEntryPoint
-        }),
-      });
-
-      const result = await response.json();
-      setExecutionResult(result);
 
       // Run all three evaluations in parallel and wait for all to complete
       // Code evaluation promise
@@ -320,21 +399,45 @@ export function EditorProvider({ children }: { children: ReactNode }) {
         }
       })();
 
-      // Accuracy evaluation promise
-      const executionText = result.success ? result.output : result.error;
-      const accuracyEvaluationPromise = executionText ? 
-        fetch('/api/evaluate-accuracy', {
+      // Accuracy evaluation promise - for type 1 (HTML/CSS), use code content instead of execution output
+      let accuracyEvaluationPromise;
+      if (taskData.type === 1) {
+        // For HTML/CSS challenges, pass the code content for evaluation
+        const allCode = Object.entries(files).map(([filename, content]) => 
+          `// ${filename}\n${content}`
+        ).join('\n\n');
+        
+        accuracyEvaluationPromise = fetch('/api/evaluate-accuracy', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            output: executionText
+            output: allCode
           }),
         }).then(response => response.json()).catch(error => {
           console.error('Code accuracy evaluation error:', error);
           return { success: false };
-        }) : Promise.resolve({ success: false });
+        });
+      } else {
+        // For other challenges, use execution output from state
+        const currentExecutionResult = executionResult || { success: false, output: '', error: 'No execution result' };
+        
+        const executionText = currentExecutionResult.success ? currentExecutionResult.output : currentExecutionResult.error;
+        accuracyEvaluationPromise = executionText ? 
+          fetch('/api/evaluate-accuracy', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              output: executionText
+            }),
+          }).then(response => response.json()).catch(error => {
+            console.error('Code accuracy evaluation error:', error);
+            return { success: false };
+          }) : Promise.resolve({ success: false });
+      }
 
       // Wait for all evaluations to complete
       try {
@@ -345,21 +448,32 @@ export function EditorProvider({ children }: { children: ReactNode }) {
         ]);
 
         // Set all scores at once after all evaluations are complete
+        const newScores: {
+          promptChainingScore?: number | null;
+          codeEvaluationScore?: number | null;
+          codeAccuracyScore?: number | null;
+        } = {};
+
         if (codeEvaluationResult.success && codeEvaluationResult.evaluation) {
           setCodeEvaluationScore(codeEvaluationResult.evaluation.FinalScore);
+          newScores.codeEvaluationScore = codeEvaluationResult.evaluation.FinalScore;
         }
 
         if (promptEvaluationResult.success && promptEvaluationResult.evaluation) {
           setPromptChainingScore(promptEvaluationResult.evaluation.PromptChainingScore);
+          newScores.promptChainingScore = promptEvaluationResult.evaluation.PromptChainingScore;
         }
 
         if (accuracyEvaluationResult.success && accuracyEvaluationResult.evaluation) {
           setCodeAccuracyScore(accuracyEvaluationResult.evaluation.AccuracyScore);
+          newScores.codeAccuracyScore = accuracyEvaluationResult.evaluation.AccuracyScore;
         }
+
+        // Note: Persistent scores are automatically saved via saveFeedbackToDatabase in prompt-panel.tsx
       } catch (evaluationError) {
         console.error('Error running evaluations:', evaluationError);
       }
-    } catch (error) {
+    } catch (executionError) {
       setExecutionResult({
         success: false,
         output: '',
@@ -429,6 +543,8 @@ export function EditorProvider({ children }: { children: ReactNode }) {
       setPromptChainingScore,
       codeAccuracyScore,
       setCodeAccuracyScore,
+      taskType,
+      htmlOutput,
       getAllFiles,
       executeMultiFile
     }}>

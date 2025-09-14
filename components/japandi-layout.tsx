@@ -2,7 +2,6 @@
 
 import React from "react";
 import { Navigation } from "@/components/navigation";
-import { useRouter } from "next/navigation";
 
 interface JapandiLayoutProps {
   children: React.ReactNode;
@@ -19,7 +18,6 @@ export function JapandiLayout({
   showNav = true,
   maxWidth = "7xl"
 }: JapandiLayoutProps) {
-  const router = useRouter();
   
   const maxWidthClasses = {
     sm: "max-w-sm",

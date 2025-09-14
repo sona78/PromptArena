@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { AuthGuard } from "@/components/auth-guard";
 import { Navigation } from "@/components/navigation";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,9 +13,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ChevronDown, Trophy, Medal, Award, Settings, ArrowLeft } from "lucide-react";
-import Link from "next/link";
-import { supabase } from "@/lib/supabase";
+import { ChevronDown, Trophy, Medal, Award, ArrowLeft } from "lucide-react";
 
 interface TaskLeaderboardEntry {
   rank: number;
@@ -50,7 +48,7 @@ export default function TaskLeaderboardPage() {
     if (taskId) {
       fetchTaskAndLeaderboard();
     }
-  }, [taskId]);
+  }, [taskId]); // fetchTaskAndLeaderboard is defined inside the component and will cause infinite re-renders if added
 
   const fetchTaskAndLeaderboard = async () => {
     try {
@@ -67,7 +65,7 @@ export default function TaskLeaderboardPage() {
       setTask(data.task);
       
       // Process leaderboard data with formatted dates
-      const processedData: TaskLeaderboardEntry[] = data.leaderboard.map((entry: any) => ({
+      const processedData: TaskLeaderboardEntry[] = data.leaderboard.map((entry: { lastSubmission: string } & Omit<TaskLeaderboardEntry, 'lastSubmission'>) => ({
         ...entry,
         lastSubmission: new Date(entry.lastSubmission).toLocaleDateString()
       }));

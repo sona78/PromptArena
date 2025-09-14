@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase/server';
 
 interface BestPractice {
   id: string;
@@ -179,7 +178,7 @@ export async function GET(request: NextRequest) {
 }
 
 // Future endpoint for when ML analysis is ready
-export async function POST(request: NextRequest) {
+export async function POST(_request: NextRequest) {
   try {
     // This would be called by your ML pipeline to update best practices
     // const { practices, model_stats } = await request.json();
