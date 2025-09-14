@@ -20,7 +20,7 @@ import { useEditor } from "./editor-context";
 export function PromptPanel() {
   const [prompt, setPrompt] = useState('');
   const [activeTab, setActiveTab] = useState('write');
-  const { code, setCode, isLoading, setIsLoading } = useEditor();
+  const { code, setCode, isLoading, setIsLoading, promptQualityScore, setPromptQualityScore } = useEditor();
 
   const handleSubmit = async () => {
     if (!prompt.trim()) {
@@ -37,20 +37,63 @@ Current code:
 \`\`\`
 ${code}
 \`\`\``;
+
+    const evaluationPrompt = `You are a prompt evaluation assistant. Given a user-supplied prompt (the "query"), you will evaluate its effectiveness according to the following metrics (derived from the Anthropic Prompt Engineering guidelines):
+
+1. Clarity & Directness — Is the prompt clear, unambiguous, and direct about what is asked?
+2. Role Definition / System Context — Does the prompt give you a role or system context (e.g. "You are …") so you understand how to respond?
+3. Specificity / Constraints — Does the prompt include specific constraints (format, tone, length, domain, audience, etc.)?
+4. Use of Examples or Few-Shot Guidance — Does it use examples to illustrate what is wanted or show style/format?
+5. Chain of Thought / Reasoning Encouragement — Does it ask the model to think step by step or explain reasoning when needed?
+6. Prefilling / Preface / Structured Tags — Are there structured tags or prefilling that help guide response structure?
+7. Conciseness / Avoiding Redundancy — Is the prompt free from unnecessary words or confusing redundancy?
+8. Suitability of Tone / Audience — Is the tone and style appropriate for the target audience and use case?
+9. Success Criteria / Eval Metrics — Does the prompt define success criteria or what "good" looks like?
+
+---
+
+Task:
+
+Given the user prompt below, evaluate it on each metric and then give it a score out of 10. 
+Return the score in a json format with key "score" as the only field.
+Your response should be in the following format:
+{
+    "score": 10
+}
+
+---
+
+User Prompt:
+${prompt}`;
+
     try {
-      const response = await fetch('/api/claude', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ prompt: finalPrompt }),
-      });
+      // Run both the code modification and prompt evaluation in parallel
+      const [codeResponse, evaluationResponse] = await Promise.all([
+        fetch('/api/claude', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ prompt: finalPrompt }),
+        }),
+        fetch('/api/claude', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ prompt: evaluationPrompt }),
+        })
+      ]);
 
-      const data = await response.json();
+      const [codeData, evaluationData] = await Promise.all([
+        codeResponse.json(),
+        evaluationResponse.json()
+      ]);
 
-      if (data.success) {
+      // Handle code modification response
+      if (codeData.success) {
         // Strip markdown code blocks from Claude's response
-        let cleanedCode = data.content;
+        let cleanedCode = codeData.content;
         
         // Remove code block markers (```python, ```javascript, etc.)
         cleanedCode = cleanedCode.replace(/^```\w*\n?/gm, '');
@@ -62,12 +105,38 @@ ${code}
         // Handle error - show in editor
         setCode(`# Error calling Claude API
 
-**Error:** ${data.error}
+**Error:** ${codeData.error}
 
 **Original Prompt:**
 ${prompt}
 
 Please try again or check your configuration.`);
+      }
+
+      // Handle evaluation response
+      if (evaluationData.success) {
+        try {
+          // Extract JSON from Claude's response (it might have extra text)
+          const content = evaluationData.content;
+          const jsonMatch = content.match(/\{[^}]*"score"[^}]*\}/);
+          
+          if (jsonMatch) {
+            const evaluation = JSON.parse(jsonMatch[0]);
+            if (evaluation.score && typeof evaluation.score === 'number') {
+              setPromptQualityScore(evaluation.score);
+            }
+          } else {
+            // Fallback: try to extract just the number after "score"
+            const scoreMatch = content.match(/"score":\s*(\d+(?:\.\d+)?)/);
+            if (scoreMatch) {
+              const score = parseFloat(scoreMatch[1]);
+              setPromptQualityScore(score);
+            }
+          }
+        } catch (parseError) {
+          console.error('Failed to parse evaluation response:', parseError);
+          console.log('Raw response:', evaluationData.content);
+        }
       }
     } catch (error) {
       // Handle network error
@@ -186,9 +255,12 @@ Please check your internet connection and try again.`);
               </h3>
               <div className="flex items-center space-x-2">
                 <div className="flex-1 bg-gray-800 rounded-full h-2">
-                  <div className="bg-emerald-500 h-2 rounded-full w-3/4"></div>
+                  <div 
+                    className="bg-emerald-500 h-2 rounded-full transition-all duration-300" 
+                    style={{ width: `${(promptQualityScore / 10) * 100}%` }}
+                  ></div>
                 </div>
-                <span className="text-sm font-medium text-emerald-400">8.4/10</span>
+                <span className="text-sm font-medium text-emerald-400">{promptQualityScore}/10</span>
               </div>
             </Card>
 
