@@ -45,6 +45,100 @@ export default function DashboardPage() {
     }
   };
 
+  const copyTemplateToSession = async (taskId: string, sessionId: string) => {
+    try {
+      console.log(`Copying template for task ${taskId} to session ${sessionId}`);
+
+      // Recursive function to copy all files and folders
+      const copyFolderRecursively = async (sourcePath: string, targetPath: string) => {
+        // List all items in the current folder
+        const { data: items, error: listError } = await supabase.storage
+          .from('Templates')
+          .list(sourcePath, {
+            sortBy: { column: 'name', order: 'asc' }
+          });
+
+        if (listError) {
+          console.error(`Error listing items in ${sourcePath}:`, listError);
+          // If this is the root template folder and it doesn't exist, create fallback
+          if (sourcePath === taskId) {
+            console.log('Template folder not found, creating fallback file');
+            await supabase.storage
+              .from('Sessions')
+              .upload(`${sessionId}/main.py`, new Blob(['# Write your code here\n'], { type: 'text/plain' }));
+          }
+          return;
+        }
+
+        if (!items || items.length === 0) {
+          console.log(`No items found in ${sourcePath}`);
+          // If this is the root template folder and it's empty, create fallback
+          if (sourcePath === taskId) {
+            console.log('Template folder is empty, creating fallback file');
+            await supabase.storage
+              .from('Sessions')
+              .upload(`${sessionId}/main.py`, new Blob(['# Write your code here\n'], { type: 'text/plain' }));
+          }
+          return;
+        }
+
+        console.log(`Found ${items.length} items in ${sourcePath}`);
+
+        for (const item of items) {
+          if (item.name === '.emptyFolderPlaceholder') continue; // Skip placeholder files
+
+          const itemSourcePath = sourcePath ? `${sourcePath}/${item.name}` : item.name;
+          const itemTargetPath = targetPath ? `${targetPath}/${item.name}` : item.name;
+
+          try {
+            // Check if this is a folder (has metadata null) or a file
+            if (item.metadata === null) {
+              // This is a folder, recurse into it
+              console.log(`Processing folder: ${item.name}`);
+              await copyFolderRecursively(itemSourcePath, itemTargetPath);
+            } else {
+              // This is a file, copy it
+              console.log(`Copying file: ${item.name} from ${itemSourcePath}`);
+
+              const { data: fileData, error: downloadError } = await supabase.storage
+                .from('Templates')
+                .download(itemSourcePath);
+
+              if (downloadError) {
+                console.error(`Error downloading file ${itemSourcePath}:`, downloadError);
+                continue;
+              }
+
+              const { error: uploadError } = await supabase.storage
+                .from('Sessions')
+                .upload(`${sessionId}/${itemTargetPath}`, fileData);
+
+              if (uploadError) {
+                console.error(`Error uploading file ${itemTargetPath} to session:`, uploadError);
+              } else {
+                console.log(`Successfully copied ${itemTargetPath} to session`);
+              }
+            }
+          } catch (itemError) {
+            console.error(`Error processing item ${item.name}:`, itemError);
+          }
+        }
+      };
+
+      // Start copying from the task template folder
+      await copyFolderRecursively(taskId, '');
+
+      console.log(`Template copying completed for task ${taskId}`);
+
+    } catch (error) {
+      console.error('Error copying template to session:', error);
+      // Fallback: create a basic main.py file
+      await supabase.storage
+        .from('Sessions')
+        .upload(`${sessionId}/main.py`, new Blob(['# Write your code here\n'], { type: 'text/plain' }));
+    }
+  };
+
   const handleStartTask = async (taskId: string) => {
     setStartingTask(taskId);
 
@@ -91,20 +185,12 @@ export default function DashboardPage() {
           return;
         }
 
-        // Create folder in storage bucket with appropriate starter file
-        const task = tasks.find(t => t.task_id === taskId);
-        const shouldCreatePython = task && (task.type === 0 || task.type === 2);
-
-        const fileName = shouldCreatePython ? 'main.py' : '.keep';
-        const fileContent = shouldCreatePython ? '# Write your code here\n' : '';
-
-        const { error: storageError } = await supabase.storage
-          .from('Sessions')
-          .upload(`${sessionId}/${fileName}`, new Blob([fileContent], { type: 'text/plain' }));
-
-        if (storageError) {
-          console.error('Error creating storage folder:', storageError);
-          // Don't return here as session was already created successfully
+        // Copy template files from Templates bucket
+        try {
+          await copyTemplateToSession(taskId, sessionId);
+        } catch (templateError) {
+          console.error('Template copying failed, but session was created:', templateError);
+          // Session creation continues even if template copying fails
         }
       }
 
