@@ -45,32 +45,48 @@ export async function POST(request: NextRequest) {
 
     // Overwrite feedback state but preserve persistent fields from previous feedback
     const currentFeedback = sessionData.feedback || {};
-    const persistentFields = {};
+    const persistentFields: Record<string, unknown> = {};
 
-    // Extract persistent fields (like prompt chaining scores) if they exist
-    if (typeof currentFeedback === 'object' && currentFeedback !== null) {
-      if ('promptChainingScore' in currentFeedback) {
-        persistentFields.promptChainingScore = currentFeedback.promptChainingScore;
+    // Helper function to extract persistent fields from an object
+    const extractPersistentFields = (obj: any) => {
+      if (typeof obj === 'object' && obj !== null) {
+        if ('promptChainingScore' in obj && obj.promptChainingScore !== null && obj.promptChainingScore !== undefined) {
+          persistentFields.promptChainingScore = obj.promptChainingScore;
+        }
+        if ('codeEvaluationScore' in obj && obj.codeEvaluationScore !== null && obj.codeEvaluationScore !== undefined) {
+          persistentFields.codeEvaluationScore = obj.codeEvaluationScore;
+        }
+        if ('codeAccuracyScore' in obj && obj.codeAccuracyScore !== null && obj.codeAccuracyScore !== undefined) {
+          persistentFields.codeAccuracyScore = obj.codeAccuracyScore;
+        }
+        if ('promptTokenCount' in obj && obj.promptTokenCount !== null && obj.promptTokenCount !== undefined) {
+          persistentFields.promptTokenCount = obj.promptTokenCount;
+        }
+        if ('responseTokenCount' in obj && obj.responseTokenCount !== null && obj.responseTokenCount !== undefined) {
+          persistentFields.responseTokenCount = obj.responseTokenCount;
+        }
       }
-      if ('codeEvaluationScore' in currentFeedback) {
-        persistentFields.codeEvaluationScore = currentFeedback.codeEvaluationScore;
-      }
-      if ('codeAccuracyScore' in currentFeedback) {
-        persistentFields.codeAccuracyScore = currentFeedback.codeAccuracyScore;
-      }
+    };
+
+    // Check both the root feedback object and the nested data object
+    extractPersistentFields(currentFeedback);
+    if ('data' in currentFeedback) {
+      extractPersistentFields(currentFeedback.data);
     }
 
     // Create new feedback object, overwriting previous state but keeping persistent fields
+    const dataFields: Record<string, unknown> = {
+      metrics: metrics || {},
+      qualityScore: score,
+      // Keep persistent fields in data as well for backward compatibility
+      ...persistentFields
+    };
+
     const updatedFeedback = {
       ...persistentFields,
       timestamp: new Date().toISOString(),
       type: 'prompt_analysis',
-      data: {
-        metrics: metrics || {},
-        qualityScore: score,
-        // Keep persistent fields in data as well for backward compatibility
-        ...persistentFields
-      }
+      data: dataFields
     };
 
     // Update the session with the best score (keep highest score)

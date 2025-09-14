@@ -18,6 +18,7 @@ import {
 import { useEditor } from "./editor-context";
 import { supabase } from '@/lib/supabase';
 import { useVoiceRecording } from '@/hooks/use-voice-recording';
+import { countTokens } from '@anthropic-ai/tokenizer';
 
 interface PromptPanelProps {
   sessionId: string;
@@ -95,44 +96,88 @@ export function PromptPanel({ sessionId }: PromptPanelProps) {
         return;
       }
 
-      // Extract persistent fields from current feedback
+      // Extract persistent fields from current feedback (avoiding duplication)
       const currentFeedback = session?.feedback || {};
-      const persistentFields: Record<string, unknown> = {};
+      let persistentData: Record<string, unknown> = {};
 
-      // Preserve persistent fields that should not be removed
-      if (typeof currentFeedback === 'object' && currentFeedback !== null) {
-        if ('promptChainingScore' in currentFeedback) {
-          persistentFields.promptChainingScore = currentFeedback.promptChainingScore;
-        }
-        if ('codeEvaluationScore' in currentFeedback) {
-          persistentFields.codeEvaluationScore = currentFeedback.codeEvaluationScore;
-        }
-        if ('codeAccuracyScore' in currentFeedback) {
-          persistentFields.codeAccuracyScore = currentFeedback.codeAccuracyScore;
-        }
+      // Extract persistent fields from current feedback, preferring root level
+      if (currentFeedback.promptChainingScore !== null && currentFeedback.promptChainingScore !== undefined) {
+        persistentData.promptChainingScore = currentFeedback.promptChainingScore;
+      }
+      if (currentFeedback.codeEvaluationScore !== null && currentFeedback.codeEvaluationScore !== undefined) {
+        persistentData.codeEvaluationScore = currentFeedback.codeEvaluationScore;
+      }
+      if (currentFeedback.codeAccuracyScore !== null && currentFeedback.codeAccuracyScore !== undefined) {
+        persistentData.codeAccuracyScore = currentFeedback.codeAccuracyScore;
+      }
+      if (currentFeedback.promptTokenCount !== null && currentFeedback.promptTokenCount !== undefined) {
+        persistentData.promptTokenCount = currentFeedback.promptTokenCount;
+      }
+      if (currentFeedback.responseTokenCount !== null && currentFeedback.responseTokenCount !== undefined) {
+        persistentData.responseTokenCount = currentFeedback.responseTokenCount;
       }
 
-      // Overwrite feedback state with new submission, keeping persistent fields
+      // Update with new data from current submission
+      persistentData.metrics = metrics;
+      persistentData.qualityScore = qualityScore;
+
+      // Always update token counts when available (from current submission)
+      if (lastPromptTokenCount !== null && lastPromptTokenCount !== undefined && lastPromptTokenCount > 0) {
+        persistentData.promptTokenCount = lastPromptTokenCount;
+      }
+      if (lastResponseTokenCount !== null && lastResponseTokenCount !== undefined && lastResponseTokenCount > 0) {
+        persistentData.responseTokenCount = lastResponseTokenCount;
+      }
+
+      // Update with state values if they are not null/undefined
+      if (promptChainingScore !== null && promptChainingScore !== undefined) {
+        persistentData.promptChainingScore = promptChainingScore;
+      }
+      if (codeEvaluationScore !== null && codeEvaluationScore !== undefined) {
+        persistentData.codeEvaluationScore = codeEvaluationScore;
+      }
+      if (codeAccuracyScore !== null && codeAccuracyScore !== undefined) {
+        persistentData.codeAccuracyScore = codeAccuracyScore;
+      }
+
+      // Create clean feedback object without duplication
       const updatedFeedback = {
-        ...persistentFields,
+        ...persistentData,
         timestamp: new Date().toISOString(),
-        type: 'prompt_analysis',
-        data: {
-          metrics: metrics,
-          qualityScore: qualityScore,
-          promptTokenCount: lastPromptTokenCount,
-          responseTokenCount: lastResponseTokenCount,
-          // Include current scores from state (these will be the latest values)
-          promptChainingScore: promptChainingScore,
-          codeEvaluationScore: codeEvaluationScore,
-          codeAccuracyScore: codeAccuracyScore
-        }
+        type: 'prompt_analysis'
       };
 
-      // Update session with new feedback (complete overwrite)
+      // Calculate weighted overall score
+      const calculateOverallScore = (feedback: any): number => {
+        const promptQuality = feedback.qualityScore || 0;
+        const promptChaining = feedback.promptChainingScore || 0;
+        const codeEvaluation = feedback.codeEvaluationScore || 0;
+        const codeAccuracy = feedback.codeAccuracyScore || 0;
+
+        // Weights: 10% prompt quality, 15% prompt chaining, 30% code evaluation, 45% code accuracy
+        // Note: prompt quality is on scale 0-10, others are 0-1, so normalize prompt quality
+        const normalizedPromptQuality = promptQuality / 10;
+
+        const weightedScore = (
+          (0.10 * normalizedPromptQuality) +
+          (0.15 * promptChaining) +
+          (0.30 * codeEvaluation) +
+          (0.45 * codeAccuracy)
+        );
+
+        // Return score as percentage (0-100)
+        return Math.round(weightedScore * 100);
+      };
+
+      const overallScore = calculateOverallScore(updatedFeedback);
+
+      // Update session with new feedback and calculated score
       const { error: updateError } = await supabase
         .from('Sessions')
-        .update({ feedback: updatedFeedback })
+        .update({
+          feedback: updatedFeedback,
+          score: overallScore
+        })
         .eq('session_id', sessionId);
 
       if (updateError) {
@@ -186,52 +231,37 @@ export function PromptPanel({ sessionId }: PromptPanelProps) {
 
       const feedback = session.feedback || {};
 
-      // Since feedback is now a single object (not an array), check if it has the expected structure
-      let recentAnalysis = null;
+      // Check if feedback has the expected structure (clean, no duplication)
       if (typeof feedback === 'object' && feedback !== null && 'type' in feedback && feedback.type === 'prompt_analysis') {
-        recentAnalysis = feedback;
-      }
+        // Restore the metrics and scores directly from the feedback object
+        if (feedback.metrics) {
+          setPromptMetrics(feedback.metrics);
+        }
+        if (feedback.qualityScore) {
+          setPromptQualityScore(feedback.qualityScore);
+        }
 
-      if (
-        recentAnalysis &&
-        typeof recentAnalysis === "object" &&
-        "data" in recentAnalysis &&
-        recentAnalysis.data &&
-        typeof recentAnalysis.data === "object"
-      ) {
-        const data = recentAnalysis.data as {
-          metrics?: Record<string, unknown>;
-          qualityScore?: number;
-          promptTokenCount?: number;
-          responseTokenCount?: number;
-          promptChainingScore?: number;
-          codeEvaluationScore?: number;
-          codeAccuracyScore?: number;
-        };
+        // Token counts
+        if (feedback.promptTokenCount) {
+          setLastPromptTokenCount(feedback.promptTokenCount);
+        }
+        if (feedback.responseTokenCount) {
+          setLastResponseTokenCount(feedback.responseTokenCount);
+        }
 
-        // Restore the metrics and scores from the most recent analysis
-        if (data.metrics) {
-          setPromptMetrics(data.metrics);
-        }
-        if (data.qualityScore) {
-          setPromptQualityScore(data.qualityScore);
-        }
-        if (data.promptTokenCount) {
-          setLastPromptTokenCount(data.promptTokenCount);
-        }
-        if (data.responseTokenCount) {
-          setLastResponseTokenCount(data.responseTokenCount);
-        }
-        // Restore prompt chaining data from feedback object
+        // Restore evaluation scores
         // These will be displayed in the left file system panel
-        if (data.promptChainingScore !== undefined) {
-          setPromptChainingScore(data.promptChainingScore);
+        if (feedback.promptChainingScore !== undefined) {
+          console.log('Restoring promptChainingScore from feedback:', feedback.promptChainingScore);
+          setPromptChainingScore(feedback.promptChainingScore);
         }
-        if (data.codeEvaluationScore !== undefined) {
-          setCodeEvaluationScore(data.codeEvaluationScore);
+        if (feedback.codeEvaluationScore !== undefined) {
+          console.log('Restoring codeEvaluationScore from feedback:', feedback.codeEvaluationScore);
+          setCodeEvaluationScore(feedback.codeEvaluationScore);
         }
-        if (data.codeAccuracyScore !== undefined) {
-          setCodeAccuracyScore(data.codeAccuracyScore);
+        if (feedback.codeAccuracyScore !== undefined) {
+          console.log('Restoring codeAccuracyScore from feedback:', feedback.codeAccuracyScore);
+          setCodeAccuracyScore(feedback.codeAccuracyScore);
         }
       }
     } catch (error) {
@@ -247,8 +277,14 @@ export function PromptPanel({ sessionId }: PromptPanelProps) {
 
   // Calculate token count using Anthropic tokenizer
   const tokenCount = useMemo(() => {
-    // Simple estimation: 1 token ≈ 4 characters for English text
-    return Math.ceil(prompt.length / 4);
+    if (!prompt.trim()) return 0;
+    try {
+      return countTokens(prompt);
+    } catch (error) {
+      console.error('Error counting tokens:', error);
+      // Fallback to character-based estimation if tokenizer fails
+      return Math.ceil(prompt.length / 4);
+    }
   }, [prompt]);
 
   // Handle voice recording toggle
@@ -269,8 +305,15 @@ export function PromptPanel({ sessionId }: PromptPanelProps) {
       return;
     }
 
-    // Store the token count of the submitted prompt using simple estimation
-    const submittedTokenCount = Math.ceil(prompt.length / 4);
+    // Store the token count of the submitted prompt using proper tokenizer
+    let submittedTokenCount;
+    try {
+      submittedTokenCount = countTokens(prompt);
+    } catch (error) {
+      console.error('Error counting prompt tokens:', error);
+      // Fallback to character-based estimation
+      submittedTokenCount = Math.ceil(prompt.length / 4);
+    }
     setLastPromptTokenCount(submittedTokenCount);
 
     setIsLoading(true);
@@ -379,8 +422,15 @@ Return only the complete code, no explanations.`;
         cleanedCode = cleanedCode.replace(/^```\w*\n?/gm, '');
         cleanedCode = cleanedCode.replace(/\n?```$/gm, '');
 
-        // Count tokens in Claude's response using simple estimation
-        const responseTokenCount = Math.ceil(cleanedCode.length / 4);
+        // Count tokens in Claude's response using proper tokenizer
+        let responseTokenCount;
+        try {
+          responseTokenCount = countTokens(cleanedCode);
+        } catch (error) {
+          console.error('Error counting response tokens:', error);
+          // Fallback to character-based estimation
+          responseTokenCount = Math.ceil(cleanedCode.length / 4);
+        }
         setLastResponseTokenCount(responseTokenCount);
 
         // Update the editor with cleaned response

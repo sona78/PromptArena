@@ -226,19 +226,19 @@ export default function DashboardPage() {
 
   const categories: CategoryConfig[] = [
     {
-      title: "FRONTEND",
+      title: "Backend",
       icon: Monitor,
-      taskTypes: [0], // Frontend tasks
+      taskTypes: [0],
       searchPlaceholder: "Search frontend challenges..."
     },
     {
-      title: "BACKEND", 
+      title: "Frontend", 
       icon: Server,
-      taskTypes: [1], // Backend tasks
+      taskTypes: [1],
       searchPlaceholder: "Search backend challenges..."
     },
     {
-      title: "MACHINE LEARNING",
+      title: "Machine Learning",
       icon: Brain,
       taskTypes: [2], // ML tasks
       searchPlaceholder: "Search ML challenges..."
