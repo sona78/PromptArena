@@ -39,8 +39,9 @@ export function LoginForm({
       });
       if (error) throw error;
       
-      // Force a page refresh to update the middleware session
-      window.location.href = "/challenges";
+      // Use router.push and refresh to properly update session
+      router.push("/challenges");
+      router.refresh();
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : "An error occurred");
     } finally {
