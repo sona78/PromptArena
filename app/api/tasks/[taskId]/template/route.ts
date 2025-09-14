@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase/server';
+import { createClient } from '@/lib/supabase/server';
 
 export async function GET(
   request: NextRequest,
@@ -9,6 +9,7 @@ export async function GET(
     const taskId = params.taskId;
 
     // Get the current user from the session
+    const supabase = await createClient();
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     
     if (userError || !user) {
@@ -63,7 +64,7 @@ export async function GET(
     const files: Record<string, string> = {};
     
     if (fileList && fileList.length > 0) {
-      const downloadPromises = fileList.map(async (file) => {
+      const downloadPromises = fileList.map(async (file: any) => {
         if (file.name && !file.name.endsWith('/')) { // Skip directories
           try {
             const { data, error } = await supabase.storage
@@ -111,6 +112,7 @@ export async function POST(
     const { file_path } = await request.json();
 
     // Get the current user from the session
+    const supabase = await createClient();
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     
     if (userError || !user) {
