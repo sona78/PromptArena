@@ -621,9 +621,9 @@ zPlease try again or check your configuration.`);
       </div>
 
       {/* Tab Content */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-hidden">
         {activeTab === 'write' && (
-          <div className="p-4 space-y-4">
+          <div className="h-full overflow-y-auto p-4 space-y-4">
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
@@ -749,7 +749,7 @@ zPlease try again or check your configuration.`);
 
 
         {activeTab === 'analyze' && (
-          <div className="p-4 space-y-4">
+          <div className="h-96 overflow-y-auto p-4 space-y-4">
             <Card className="bg-gray-50 border-gray-200 p-3">
               <h3 className="text-sm font-medium text-gray-700 mb-2">
                 Token Counts

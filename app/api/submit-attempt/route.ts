@@ -97,8 +97,7 @@ export async function POST(request: NextRequest) {
       .update({
         prompts: updatedPrompts,
         feedback: updatedFeedback,
-        score: newScore,
-        updated_at: new Date().toISOString()
+        score: newScore
       })
       .eq('session_id', sessionId)
       .select()
