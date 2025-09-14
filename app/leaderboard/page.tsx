@@ -111,8 +111,8 @@ export default function LeaderboardPage() {
 
         <div className="max-w-7xl mx-auto px-6 py-8">
           <div className="mb-8">
-            <h1 className="text-3xl font-semibold text-gray-900 mb-2">Leaderboard</h1>
-            <p className="text-gray-600">Top performing prompt engineers in our community.</p>
+            <h1 className="text-title-lg text-gray-900 mb-2">Leaderboard</h1>
+            <p className="text-body-lg text-gray-600">Top performing prompt engineers in our community.</p>
           </div>
 
           {/* Filter Dropdowns */}
@@ -175,7 +175,7 @@ export default function LeaderboardPage() {
             <CardContent className="p-0">
               <div className="overflow-hidden">
                 <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
-                  <div className="grid grid-cols-6 gap-4 text-sm font-medium text-gray-700">
+                  <div className="grid grid-cols-6 gap-4 text-subtitle-sm text-gray-700">
                     <div className="text-left">Rank</div>
                     <div className="text-left">Username</div>
                     <div className="text-center">Verbiage Score</div>
@@ -189,22 +189,22 @@ export default function LeaderboardPage() {
                   {mockLeaderboardData.map((entry, index) => (
                     <div
                       key={entry.username}
-                      className={`grid grid-cols-6 gap-4 px-6 py-4 text-sm hover:bg-gray-50 ${
+                      className={`grid grid-cols-6 gap-4 px-6 py-4 text-body-sm hover:bg-gray-50 ${
                         index < 3 ? 'bg-blue-50/30' : 'bg-white'
                       }`}
                     >
                       <div className="flex items-center space-x-3">
                         {getRankIcon(entry.rank)}
-                        <span className="text-gray-700">#{entry.rank}</span>
+                        <span className="text-body text-gray-700">#{entry.rank}</span>
                       </div>
-                      <div className="text-gray-900 font-medium">{entry.username}</div>
+                      <div className="text-subtitle text-gray-900">{entry.username}</div>
                       <div className="text-center">
                         <span className={getPercentileColor(entry.verbiageScore)}>
                           {entry.verbiageScore}%
                         </span>
                       </div>
-                      <div className="text-center text-gray-700">{entry.numPrompts}</div>
-                      <div className="text-center text-gray-700">{entry.tokenInput.toLocaleString()}</div>
+                      <div className="text-center text-body text-gray-700">{entry.numPrompts}</div>
+                      <div className="text-center text-body text-gray-700">{entry.tokenInput.toLocaleString()}</div>
                       <div className="text-center">
                         <span className={getPercentileColor(entry.codePerformance)}>
                           {entry.codePerformance}%

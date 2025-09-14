@@ -89,14 +89,14 @@ export default function CreateTaskPage() {
 
         <div className="max-w-4xl mx-auto px-6 py-8">
           <div className="mb-8">
-            <h1 className="text-3xl font-semibold text-gray-900 mb-2">Create New Task</h1>
-            <p className="text-gray-600">Design a new challenge for the community to tackle.</p>
+            <h1 className="text-title-lg text-gray-900 mb-2">Create New Task</h1>
+            <p className="text-body-lg text-gray-600">Design a new challenge for the community to tackle.</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <Card className="bg-white border border-gray-200">
               <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
+                <CardTitle className="flex items-center space-x-2 text-subtitle">
                   <Target className="w-5 h-5" />
                   <span>Basic Information</span>
                 </CardTitle>
@@ -142,8 +142,8 @@ export default function CreateTaskPage() {
                             : 'border-gray-200 hover:border-gray-300'
                         }`}
                       >
-                        <div className="font-medium text-gray-900">{type.label}</div>
-                        <div className="text-sm text-gray-600 mt-1">{type.description}</div>
+                        <div className="text-subtitle text-gray-900">{type.label}</div>
+                        <div className="text-body-sm text-gray-600 mt-1">{type.description}</div>
                       </button>
                     ))}
                   </div>
@@ -154,7 +154,7 @@ export default function CreateTaskPage() {
 
             <Card className="bg-white border border-gray-200">
               <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
+                <CardTitle className="flex items-center space-x-2 text-subtitle">
                   <Code className="w-5 h-5" />
                   <span>Challenge Files</span>
                 </CardTitle>
@@ -173,7 +173,7 @@ export default function CreateTaskPage() {
                       allowFolders={true}
                     />
                   </div>
-                  <p className="text-sm text-gray-500 mt-1">
+                  <p className="text-body-sm text-gray-500 mt-1">
                     Upload your complete challenge folder including test files, starter code, and any supporting files
                   </p>
                 </div>
@@ -189,7 +189,7 @@ export default function CreateTaskPage() {
                     placeholder="e.g., test.py, test_cases.js, tests/test_main.py"
                     className="mt-1"
                   />
-                  <p className="text-sm text-gray-500 mt-1">
+                  <p className="text-body-sm text-gray-500 mt-1">
                     The path to the test file within your uploaded folder
                   </p>
                 </div>
@@ -197,8 +197,8 @@ export default function CreateTaskPage() {
                 {/* Show available files if folder is uploaded */}
                 {challengeFiles.length > 0 && (
                   <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                    <h4 className="text-sm font-medium text-blue-900 mb-2">Available files in your folder:</h4>
-                    <div className="text-xs text-blue-700 space-y-1 max-h-32 overflow-y-auto">
+                    <h4 className="text-body-sm font-medium text-blue-900 mb-2">Available files in your folder:</h4>
+                    <div className="text-body-sm text-blue-700 space-y-1 max-h-32 overflow-y-auto">
                       {Object.keys(fileStructure).map((filePath, index) => (
                         <div key={index} className="flex justify-between">
                           <span>{filePath}</span>
@@ -229,7 +229,7 @@ export default function CreateTaskPage() {
               <Button
                 type="submit"
                 disabled={loading || !formData.name || !formData.description || (challengeFiles.length > 0 && !formData.test_file_name)}
-                className="bg-gray-900 hover:bg-gray-800 text-white"
+                className="bg-gray-900 hover:bg-gray-800 text-white text-body"
               >
                 {loading ? "Creating..." : "Create Task"}
               </Button>

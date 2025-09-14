@@ -12,6 +12,14 @@ export default {
     extend: {
       fontFamily: {
         sans: ['-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
+        title: ['Inter Tight', 'Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+        subtitle: ['Crimson Pro', 'Crimson Text', 'Georgia', 'Times New Roman', 'serif'],
+        body: ['-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
+      },
+      fontSize: {
+        'title': ['2.5rem', { lineHeight: '1.2', letterSpacing: '0.02em' }],
+        'subtitle': ['1.25rem', { lineHeight: '1.4', letterSpacing: '0.01em' }],
+        'body': ['1rem', { lineHeight: '1.6', letterSpacing: '0.005em' }],
       },
       letterSpacing: {
         'relaxed': '0.025em',

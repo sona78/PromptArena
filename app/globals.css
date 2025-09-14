@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter+Tight:wght@300;400;500;600;700&family=Crimson+Pro:wght@300;400;500;600&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -88,8 +90,74 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-body;
+    font-size: 1rem;
+    line-height: 1.6;
+    letter-spacing: 0.005em;
     font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+@layer components {
+  /* Typography Components */
+  .text-title {
+    @apply font-title font-medium tracking-wide;
+    font-size: 2.5rem;
+    line-height: 1.2;
+    letter-spacing: 0.02em;
+  }
+  
+  .text-subtitle {
+    @apply font-subtitle font-normal;
+    font-size: 1.25rem;
+    line-height: 1.4;
+    letter-spacing: 0.01em;
+  }
+  
+  .text-body {
+    @apply font-body;
+    font-size: 1rem;
+    line-height: 1.6;
+    letter-spacing: 0.005em;
+  }
+  
+  /* Title Variants */
+  .text-title-lg {
+    @apply text-title;
+    font-size: 3rem;
+    line-height: 1.1;
+  }
+  
+  .text-title-xl {
+    @apply text-title;
+    font-size: 3.5rem;
+    line-height: 1.05;
+  }
+  
+  /* Subtitle Variants */
+  .text-subtitle-sm {
+    @apply text-subtitle;
+    font-size: 1.125rem;
+    line-height: 1.5;
+  }
+  
+  .text-subtitle-lg {
+    @apply text-subtitle;
+    font-size: 1.375rem;
+    line-height: 1.3;
+  }
+  
+  /* Body Variants */
+  .text-body-sm {
+    @apply text-body;
+    font-size: 0.875rem;
+    line-height: 1.7;
+  }
+  
+  .text-body-lg {
+    @apply text-body;
+    font-size: 1.125rem;
+    line-height: 1.6;
   }
 }
 

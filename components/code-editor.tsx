@@ -24,6 +24,8 @@ export function CodeEditor() {
     isExecuting,
     isSaving,
     hasUnsavedChanges,
+    taskType,
+    htmlOutput,
     executeMultiFile
   } = useEditor();
 
@@ -68,36 +70,36 @@ export function CodeEditor() {
   };
 
   return (
-    <div className="h-full flex flex-col bg-gray-950 overflow-hidden">
+    <div className="h-full flex flex-col bg-white overflow-hidden">
       {/* Editor Toolbar */}
-      <div className="bg-gray-900 border-b border-gray-800 px-4 py-2 flex items-center justify-between flex-shrink-0">
+      <div className="bg-[#C5AECF]/10 border-b border-[#79797C] px-4 py-2 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center space-x-3">
           <div className="flex items-center space-x-2">
-            <FileText className="w-4 h-4 text-gray-400" />
-            <span className="text-sm font-medium text-gray-300">
+            <FileText className="w-4 h-4 text-[#79797C]" />
+            <span className="text-sm font-medium text-[#28282D]">
               {activeFile ? activeFile.name : 'No file selected'}
             </span>
             {hasUnsavedChanges && !isSaving && (
-              <span className="text-xs text-orange-400" title="Unsaved changes">•</span>
+              <span className="text-xs text-[#D79D00]" title="Unsaved changes">•</span>
             )}
             {isSaving && (
-              <span className="text-xs text-blue-400 animate-pulse" title="Auto-saving...">💾</span>
+              <span className="text-xs text-[#3073B7] animate-pulse" title="Auto-saving...">💾</span>
             )}
           </div>
           {activeFile && (
-            <Badge variant="outline" className="text-xs border-gray-600 text-gray-400">
+            <Badge variant="outline" className="text-xs border-[#79797C] text-[#79797C]">
               {activeFile.language.toUpperCase()}
             </Badge>
           )}
 
           {isLoading && (
-            <Badge className="bg-blue-900 text-blue-200 text-xs animate-pulse">
+            <Badge className="bg-[#3073B7]/10 text-[#3073B7] text-xs animate-pulse">
               Generating...
             </Badge>
           )}
 
           {isSaving && (
-            <Badge className="bg-green-900 text-green-200 text-xs animate-pulse">
+            <Badge className="bg-[#00656B]/10 text-[#00656B] text-xs animate-pulse">
               Auto-saving...
             </Badge>
           )}
@@ -119,7 +121,7 @@ export function CodeEditor() {
           <Button
             variant="ghost"
             size="sm"
-            className="monaco-text-muted hover:monaco-text hover:bg-secondary/50"
+            className="text-[#79797C] hover:text-[#28282D] hover:bg-[#C5AECF]/20"
           >
             <Copy className="w-4 h-4" />
           </Button>
@@ -127,7 +129,7 @@ export function CodeEditor() {
           <Button
             variant="ghost"
             size="sm"
-            className="monaco-text-muted hover:monaco-text hover:bg-secondary/50"
+            className="text-[#79797C] hover:text-[#28282D] hover:bg-[#C5AECF]/20"
             onClick={handleReset}
             disabled={isLoading}
           >
@@ -136,7 +138,7 @@ export function CodeEditor() {
 
           <Button
             size="sm"
-            className="bg-emerald-600 hover:bg-emerald-700 text-white"
+            className="bg-[#00656B] hover:bg-[#00656B]/80 text-white"
             onClick={handleRun}
             disabled={isExecuting || isLoading}
           >
@@ -175,20 +177,47 @@ export function CodeEditor() {
         />
       </div>
 
-      {/* Status Bar */}
-      <div className="bg-gray-900 border-t border-gray-800 px-4 py-2 flex items-center justify-between text-xs text-gray-400 flex-shrink-0">
-        <div className="flex items-center space-x-4">
-          <span>Lines: {code.split('\n').length}</span>
-          <span>Characters: {code.length}</span>
-          <span>Words: {code.split(/\s+/).filter(word => word.length > 0).length}</span>
+      {/* HTML/CSS Preview for Type 1 Challenges */}
+      {taskType === 1 && htmlOutput && (
+        <div className="border-t border-[#79797C] bg-white">
+          <div className="px-4 py-2 bg-[#C5AECF]/10 border-b border-[#79797C] flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <div className="w-3 h-3 rounded-full bg-[#00656B]"></div>
+              <span className="text-sm font-medium text-[#28282D]">Live Preview</span>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-xs text-[#79797C] hover:text-[#28282D]"
+              onClick={() => window.open(`data:text/html,${encodeURIComponent(htmlOutput)}`, '_blank')}
+            >
+              Open in New Tab
+            </Button>
+          </div>
+          <div className="h-96 overflow-hidden">
+            <iframe
+              srcDoc={htmlOutput}
+              className="w-full h-full border-0"
+              sandbox="allow-scripts allow-same-origin"
+              title="HTML/CSS Preview"
+            />
+          </div>
         </div>
+      )}
 
-        <div className="flex items-center space-x-2">
+      {/* Status Bar */}
+      <div className="bg-[#C5AECF]/10 border-t border-[#79797C] px-4 py-2 flex items-center justify-between text-xs text-[#79797C]">
+        <div className="flex items-center space-x-4">
+          <span>Ready</span>
           {activeFile && (
-            <Badge className="bg-gray-800 text-gray-300 text-xs">
-              {activeFile.language.charAt(0).toUpperCase() + activeFile.language.slice(1)}
-            </Badge>
+            <span>Language: {activeFile.language}</span>
           )}
+          {taskType === 1 && htmlOutput && (
+            <span className="text-[#00656B]">• Live Preview Active</span>
+          )}
+        </div>
+        <div className="flex items-center space-x-2">
+          <span>Ln 1, Col 1</span>
         </div>
       </div>
 

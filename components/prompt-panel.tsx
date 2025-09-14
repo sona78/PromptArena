@@ -336,53 +336,53 @@ ${code}
 Return only the complete code, no explanations.`;
     }
 
-    const evaluationPrompt = `You are a prompt evaluation assistant. Given a user-supplied prompt (the “query”), you will evaluate its effectiveness according to the following metrics (derived from the Anthropic Prompt Engineering guidelines):
+    const evaluationPrompt = `You are a prompt evaluation assistant. Given a user-supplied prompt (the "query"), you will evaluate its effectiveness according to the following metrics (derived from the Anthropic Prompt Engineering guidelines):
 
         1. Clarity & Directness — Is the prompt clear, unambiguous, and direct about what is asked?
-        2. Role Definition / System Context — Does the prompt give you a role or system context (e.g. “You are …”) so you understand how to respond?
+        2. Role Definition / System Context — Does the prompt give you a role or system context (e.g. "You are …") so you understand how to respond?
         3. Specificity / Constraints — Does the prompt include specific constraints (format, tone, length, domain, audience, etc.)?
         4. Use of Examples or Few-Shot Guidance — Does it use examples to illustrate what is wanted or show style/format?
         5. Chain of Thought / Reasoning Encouragement — Does it ask the model to think step by step or explain reasoning when needed?
         6. Prefilling / Preface / Structured Tags — Are there structured tags or prefilling that help guide response structure?
         7. Conciseness / Avoiding Redundancy — Is the prompt free from unnecessary words or confusing redundancy?
         8. Suitability of Tone / Audience — Is the tone and style appropriate for the target audience and use case?
-        9. Success Criteria / Eval Metrics — Does the prompt define success criteria or what “good” looks like?
+        9. Success Criteria / Eval Metrics — Does the prompt define success criteria or what "good" looks like?
 
         ---
 
         Task:
 
-        Given the user prompt below, evaluate it on each metric giving it a score out of 10.
+        Given the user prompt below, evaluate it on each metric giving it a score out of 10 and a brief justification for that score.
         Then average the scores to get a final score out of 10.
-        Return the final score in a json format. It should have 10 keys, one for each metric and the last as a final score.
+        Return the evaluation in a json format with both scores and justifications.
         Your response should be in the following format:
         {
-            "clarity": 10,
-            "role definition": 10,
-            "specificity": 10,
-            "use of examples": 10,
-            "chain of thought": 10,
-            "prefilling": 10,
-            "conciseness": 10,
-            "suitability of tone": 10,
-            "success criteria": 10
-            "final score": 10,
+            "clarity": {"score": 10, "justification": "Brief explanation of why this score was given"},
+            "role definition": {"score": 10, "justification": "Brief explanation of why this score was given"},
+            "specificity": {"score": 10, "justification": "Brief explanation of why this score was given"},
+            "use of examples": {"score": 10, "justification": "Brief explanation of why this score was given"},
+            "chain of thought": {"score": 10, "justification": "Brief explanation of why this score was given"},
+            "prefilling": {"score": 10, "justification": "Brief explanation of why this score was given"},
+            "conciseness": {"score": 10, "justification": "Brief explanation of why this score was given"},
+            "suitability of tone": {"score": 10, "justification": "Brief explanation of why this score was given"},
+            "success criteria": {"score": 10, "justification": "Brief explanation of why this score was given"},
+            "final score": 10
         }
 
         EXAMPLE:
         User Prompt: "Write a prompt that generates a story about a dog."
         Response:
         {
-            "clarity": 5,
-            "role definition": 6,
-            "specificity": 4,
-            "use of examples": 0,
-            "chain of thought": 8,
-            "prefilling": 5,
-            "conciseness": 10,
-            "suitability of tone": 3,
-            "success criteria": 4,
-            "final score": 5.5,
+            "clarity": {"score": 5, "justification": "The request is clear but lacks specific details about story length, style, or target audience"},
+            "role definition": {"score": 6, "justification": "No explicit role is defined, but the task implies a creative writing role"},
+            "specificity": {"score": 4, "justification": "Very vague - no constraints on length, style, tone, or specific requirements"},
+            "use of examples": {"score": 0, "justification": "No examples provided to illustrate desired output style or format"},
+            "chain of thought": {"score": 8, "justification": "The request is straightforward and doesn't require complex reasoning steps"},
+            "prefilling": {"score": 5, "justification": "No structured format or prefilling guidance provided"},
+            "conciseness": {"score": 10, "justification": "Very brief and to the point without unnecessary words"},
+            "suitability of tone": {"score": 3, "justification": "No tone specified, making it unclear what style is expected"},
+            "success criteria": {"score": 4, "justification": "No clear definition of what makes a good story or successful output"},
+            "final score": 5.5
         }
 
         ---
@@ -461,10 +461,49 @@ zPlease try again or check your configuration.`);
         try {
           // Extract JSON from Claude's response (it might have extra text)
           const content = evaluationData.content;
-          const jsonMatch = content.match(/\{[\s\S]*?\}/);
+          
+          // Try multiple JSON extraction methods
+          let evaluation = null;
+          
+          // Method 1: Try to parse the entire content as JSON
+          try {
+            evaluation = JSON.parse(content);
+          } catch (e1) {
+            // Method 2: Find JSON object with proper bracket matching
+            const jsonStart = content.indexOf('{');
+            if (jsonStart !== -1) {
+              let bracketCount = 0;
+              let jsonEnd = -1;
+              
+              for (let i = jsonStart; i < content.length; i++) {
+                if (content[i] === '{') bracketCount++;
+                if (content[i] === '}') bracketCount--;
+                if (bracketCount === 0) {
+                  jsonEnd = i;
+                  break;
+                }
+              }
+              
+              if (jsonEnd !== -1) {
+                const jsonString = content.substring(jsonStart, jsonEnd + 1);
+                try {
+                  evaluation = JSON.parse(jsonString);
+                } catch (e2) {
+                  // Method 3: Fallback to regex (original method)
+                  const jsonMatch = content.match(/\{[\s\S]*?\}/);
+                  if (jsonMatch) {
+                    try {
+                      evaluation = JSON.parse(jsonMatch[0]);
+                    } catch (e3) {
+                      // JSON parsing failed
+                    }
+                  }
+                }
+              }
+            }
+          }
 
-          if (jsonMatch) {
-            const evaluation = JSON.parse(jsonMatch[0]);
+          if (evaluation) {
 
             // Store all metrics
             setPromptMetrics(evaluation);
@@ -555,9 +594,9 @@ zPlease try again or check your configuration.`);
   ];
 
   return (
-    <div className="h-full flex flex-col bg-gray-950 border-l border-gray-800">
+    <div className="h-full flex flex-col bg-white border-l border-[#79797C]">
       {/* Tab Navigation */}
-      <div className="bg-gray-900 border-b border-gray-800 px-4 py-2">
+      <div className="bg-[#C5AECF]/10 border-b border-[#79797C] px-4 py-2">
         <div className="flex space-x-1">
           {tabs.map((tab) => {
             const Icon = tab.icon;
@@ -568,8 +607,8 @@ zPlease try again or check your configuration.`);
                 size="sm"
                 className={`text-xs ${
                   activeTab === tab.id
-                    ? 'bg-blue-600 text-white'
-                    : 'text-gray-400 hover:text-white hover:bg-gray-800'
+                    ? 'bg-[#3073B7] text-white'
+                    : 'text-[#79797C] hover:text-[#28282D] hover:bg-[#C5AECF]/20'
                 }`}
                 onClick={() => setActiveTab(tab.id)}
               >
@@ -588,7 +627,7 @@ zPlease try again or check your configuration.`);
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
-                  <label className="text-sm font-medium text-gray-300">
+                  <label className="text-sm font-medium text-[#28282D]">
                     Your Prompt
                   </label>
                   <Button
@@ -596,10 +635,10 @@ zPlease try again or check your configuration.`);
                     size="sm"
                     className={`h-6 w-6 p-0 transition-colors ${
                       isRecording 
-                        ? 'text-red-400 hover:text-red-300' 
+                        ? 'text-red-600 hover:text-red-500' 
                         : isTranscribing
-                        ? 'text-blue-400'
-                        : 'text-gray-400 hover:text-gray-300'
+                        ? 'text-blue-600'
+                        : 'text-gray-600 hover:text-gray-700'
                     }`}
                     onClick={handleVoiceToggle}
                     disabled={isTranscribing || isLoading}
@@ -615,7 +654,7 @@ zPlease try again or check your configuration.`);
                   </Button>
                 </div>
                 {activeFile && (
-                  <div className="flex items-center space-x-1 text-xs text-gray-400">
+                  <div className="flex items-center space-x-1 text-xs text-gray-600">
                     <File className="w-3 h-3" />
                     <span>Editing: {activeFile.name}</span>
                   </div>
@@ -629,26 +668,26 @@ zPlease try again or check your configuration.`);
                 }
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
-                className="min-h-32 bg-gray-900 border-gray-700 text-gray-100 resize-none focus:border-blue-500"
+                className="min-h-32 bg-white border-gray-300 text-gray-900 resize-none focus:border-blue-500"
                 disabled={isLoading}
               />
               <div className="flex items-center justify-between">
-                <div className="text-xs text-blue-400 font-medium">
+                <div className="text-xs text-blue-600 font-medium">
                   {tokenCount} tokens
                 </div>
                 {voiceError && (
-                  <div className="text-xs text-red-400">
+                  <div className="text-xs text-red-600">
                     {voiceError}
                   </div>
                 )}
                 {isRecording && (
-                  <div className="flex items-center space-x-1 text-xs text-red-400">
-                    <div className="w-2 h-2 bg-red-400 rounded-full animate-pulse" />
+                  <div className="flex items-center space-x-1 text-xs text-red-600">
+                    <div className="w-2 h-2 bg-red-600 rounded-full animate-pulse" />
                     <span>Recording...</span>
                   </div>
                 )}
                 {isTranscribing && (
-                  <div className="flex items-center space-x-1 text-xs text-blue-400">
+                  <div className="flex items-center space-x-1 text-xs text-blue-600">
                     <Loader2 className="w-3 h-3 animate-spin" />
                     <span>Transcribing...</span>
                   </div>
@@ -658,7 +697,7 @@ zPlease try again or check your configuration.`);
 
 
             <Button
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                className="w-full bg-[#3073B7] hover:bg-[#3073B7]/80 text-white"
               onClick={handleSubmit}
               disabled={isLoading || !prompt.trim()}
             >
@@ -672,19 +711,19 @@ zPlease try again or check your configuration.`);
             </Button>
 
             {promptHistory.length > 0 && (
-              <div className="pt-4 border-t border-gray-800">
-                <h3 className="text-sm font-medium text-gray-300 mb-2 flex items-center">
-                  <History className="w-4 h-4 mr-1 text-blue-400" />
+              <div className="pt-4 border-t border-gray-200">
+                <h3 className="text-sm font-medium text-gray-700 mb-2 flex items-center">
+                  <History className="w-4 h-4 mr-1 text-blue-600" />
                   Recent Prompts ({promptHistory.length})
                 </h3>
                 <div className="space-y-2 max-h-48 overflow-y-auto">
                   {promptHistory.slice(-3).reverse().map((historyPrompt, index) => (
                     <div
                       key={index}
-                      className="bg-gray-900 border border-gray-700 rounded p-2 cursor-pointer hover:bg-gray-800 transition-colors"
+                      className="bg-gray-50 border border-gray-200 rounded p-2 cursor-pointer hover:bg-gray-100 transition-colors"
                       onClick={() => setPrompt(historyPrompt)}
                     >
-                      <p className="text-xs text-gray-300 line-clamp-2">
+                      <p className="text-xs text-gray-700 line-clamp-2">
                         {historyPrompt}
                       </p>
                     </div>
@@ -693,12 +732,12 @@ zPlease try again or check your configuration.`);
               </div>
             )}
 
-            <div className="pt-4 border-t border-gray-800">
-              <h3 className="text-sm font-medium text-gray-300 mb-2 flex items-center">
-                <Sparkles className="w-4 h-4 mr-1 text-yellow-400" />
+            <div className="pt-4 border-t border-gray-200">
+              <h3 className="text-sm font-medium text-gray-700 mb-2 flex items-center">
+                <Sparkles className="w-4 h-4 mr-1 text-yellow-600" />
                 Prompt Tips
               </h3>
-              <ul className="text-xs text-gray-400 space-y-1">
+              <ul className="text-xs text-gray-600 space-y-1">
                 <li>• Be specific but leave room for creativity</li>
                 <li>• Include emotional or conflict elements</li>
                 <li>• Set clear constraints or parameters</li>
@@ -711,15 +750,15 @@ zPlease try again or check your configuration.`);
 
         {activeTab === 'analyze' && (
           <div className="p-4 space-y-4">
-            <Card className="bg-gray-900 border-gray-700 p-3">
-              <h3 className="text-sm font-medium text-gray-300 mb-2">
+            <Card className="bg-gray-50 border-gray-200 p-3">
+              <h3 className="text-sm font-medium text-gray-700 mb-2">
                 Token Counts
               </h3>
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
-                    <span className="text-sm text-gray-400">Prompt:</span>
-                    <div className="text-lg font-bold text-blue-400">
+                    <span className="text-sm text-gray-600">Prompt:</span>
+                    <div className="text-lg font-bold text-blue-600">
                       {lastPromptTokenCount}
                     </div>
                     <span className="text-xs text-gray-500">tokens</span>
@@ -727,17 +766,17 @@ zPlease try again or check your configuration.`);
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
-                    <span className="text-sm text-gray-400">Response:</span>
-                    <div className="text-lg font-bold text-green-400">
+                    <span className="text-sm text-gray-600">Response:</span>
+                    <div className="text-lg font-bold text-green-600">
                       {lastResponseTokenCount}
                     </div>
                     <span className="text-xs text-gray-500">tokens</span>
                   </div>
                 </div>
-                <div className="pt-2 border-t border-gray-700">
+                <div className="pt-2 border-t border-gray-300">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-400">Total:</span>
-                    <div className="text-lg font-bold text-purple-400">
+                    <span className="text-sm text-gray-600">Total:</span>
+                    <div className="text-lg font-bold text-purple-600">
                       {lastPromptTokenCount + lastResponseTokenCount}
                     </div>
                     <span className="text-xs text-gray-500">tokens</span>
@@ -749,44 +788,63 @@ zPlease try again or check your configuration.`);
               </div>
             </Card>
 
-            <Card className="bg-gray-900 border-gray-700 p-3">
-              <h3 className="text-sm font-medium text-gray-300 mb-2">
+            <Card className="bg-gray-50 border-gray-200 p-3">
+              <h3 className="text-sm font-medium text-gray-700 mb-2">
+                Carbon Emissions
+              </h3>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-600">Total:</span>
+                <div className="text-lg font-bold text-gray-800">
+                  {((lastPromptTokenCount * 0.0001) + (lastResponseTokenCount * 0.0003)).toFixed(4)}
+                </div>
+                <span className="text-xs text-gray-500">g CO₂</span>
+              </div>
+              <div className="text-xs text-gray-500 mt-2">
+                Based on 0.0001g per input token, 0.0003g per output token
+              </div>
+            </Card>
+
+            <Card className="bg-gray-50 border-gray-200 p-3">
+              <h3 className="text-sm font-medium text-gray-700 mb-2">
                 Prompt Quality Score
               </h3>
               <div className="flex items-center space-x-2">
-                <div className="flex-1 bg-gray-800 rounded-full h-2">
+                <div className="flex-1 bg-gray-200 rounded-full h-2">
                   <div 
                     className="bg-emerald-500 h-2 rounded-full transition-all duration-300" 
                     style={{ width: `${(promptQualityScore / 10) * 100}%` }}
                   ></div>
                 </div>
-                <span className="text-sm font-medium text-emerald-400">{promptQualityScore}/10</span>
+                <span className="text-sm font-medium text-emerald-600">{promptQualityScore}/10</span>
               </div>
             </Card>
 
-            <Card className="bg-gray-900 border-gray-700 p-3">
-              <h3 className="text-sm font-medium text-gray-300 mb-2">
+            <Card className="bg-gray-50 border-gray-200 p-3">
+              <h3 className="text-sm font-medium text-gray-700 mb-2">
                 Evaluation Metrics
               </h3>
-              <div className="space-y-2 text-xs text-gray-400">
+              <div className="space-y-2 text-xs text-gray-600">
                 {promptMetrics ? (
                   Object.entries(promptMetrics)
                     .filter(([key]) => key !== 'final score')
-                    .map(([key, value]) => (
-                      <div key={key} className="flex justify-between">
-                        <span className="capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}:</span>
-                        <span className={`font-medium ${
-                          typeof value === 'number' && value >= 8 ? 'text-emerald-400' :
-                          typeof value === 'number' && value >= 6 ? 'text-yellow-400' :
-                          typeof value === 'number' && value >= 4 ? 'text-orange-400' :
-                          'text-red-400'
-                        }`}>
-                          {typeof value === 'number' ? `${value}/10` : String(value)}
-                        </span>
-                      </div>
-                    ))
+                    .map(([key, value]) => {
+                      const score = typeof value === 'number' ? value : (value as { score: number })?.score || 0;
+                      return (
+                        <div key={key} className="flex justify-between">
+                          <span className="capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}:</span>
+                          <span className={`font-medium ${
+                            score >= 8 ? 'text-emerald-600' :
+                            score >= 6 ? 'text-yellow-600' :
+                            score >= 4 ? 'text-orange-600' :
+                            'text-red-600'
+                          }`}>
+                            {score}/10
+                          </span>
+                        </div>
+                      );
+                    })
                 ) : (
-                  <div className="text-gray-500 text-center py-2">
+                  <div className="text-gray-600 text-center py-2">
                     Submit a prompt to see detailed metrics
                   </div>
                 )}
@@ -794,25 +852,35 @@ zPlease try again or check your configuration.`);
             </Card>
 
             {promptMetrics && (
-              <Card className="bg-gray-900 border-gray-700 p-3">
-                <h3 className="text-sm font-medium text-gray-300 mb-2">
-                  Improvement Suggestions
+              <Card className="bg-gray-50 border-gray-200 p-3">
+                <h3 className="text-sm font-medium text-gray-700 mb-2">
+                  Comments
                 </h3>
-                <div className="text-xs text-gray-400 space-y-1">
+                <div className="text-xs text-gray-600 space-y-3">
                   {Object.entries(promptMetrics)
-                    .filter(([key, value]) => key !== 'final score' && typeof value === 'number' && value < 7)
-                    .map(([key, value]) => (
-                      <div key={key} className="text-orange-400">
-                        • Improve {key.replace(/([A-Z])/g, ' $1').trim().toLowerCase()} (currently {String(value)}/10)
-                      </div>
-                    ))}
-                  {Object.entries(promptMetrics)
-                    .filter(([key, value]) => key !== 'final score' && typeof value === 'number' && value < 7)
-                    .length === 0 && (
-                    <div className="text-emerald-400">
-                      Great job! All metrics are performing well.
-                    </div>
-                  )}
+                    .filter(([key]) => key !== 'final score')
+                    .map(([key, value]) => {
+                      const justification = typeof value === 'object' && value !== null && 'justification' in value 
+                        ? (value as { justification: string }).justification 
+                        : null;
+                      
+                      return (
+                        <div key={key} className="space-y-1">
+                          <div className="font-medium text-gray-800 capitalize">
+                            {key.replace(/([A-Z])/g, ' $1').trim()}:
+                          </div>
+                          {justification ? (
+                            <div className="text-gray-600 pl-2 text-xs">
+                              {justification}
+                            </div>
+                          ) : (
+                            <div className="text-gray-400 pl-2 text-xs italic">
+                              No justification available
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                 </div>
               </Card>
             )}

@@ -23,20 +23,20 @@ export function Navigation({ showRank = true, className }: NavigationProps) {
   };
 
   const getLinkClassName = (path: string) => {
-    const baseClasses = "text-sm transition-colors duration-200";
+    const baseClasses = "text-subtitle-sm transition-colors duration-200";
     if (isActivePage(path)) {
-      return `${baseClasses} text-gray-900 font-medium`;
+      return `${baseClasses} text-[#28282D] font-medium`;
     }
-    return `${baseClasses} text-gray-600 hover:text-gray-900`;
+    return `${baseClasses} text-[#79797C] hover:text-[#28282D]`;
   };
 
   return (
-    <nav className={`bg-white border-b border-gray-200 px-6 py-4 ${className || ''}`}>
+    <nav className={`bg-white border-b border-[#79797C] px-6 py-4 ${className || ''}`}>
       <div className="max-w-7xl mx-auto flex items-center justify-between">
         <div className="flex items-center space-x-8">
           <Link href="/challenges" className="flex items-center space-x-2">
-            <Trophy className="w-5 h-5 text-gray-900" />
-            <span className="text-xl font-medium text-gray-900">
+            <Trophy className="w-5 h-5 text-[#28282D]" />
+            <span className="text-title text-[#28282D]">
               PromptArena
             </span>
             <Badge variant="outline" className="text-xs">
@@ -69,6 +69,18 @@ export function Navigation({ showRank = true, className }: NavigationProps) {
         </div>
         
         <div className="flex items-center space-x-4">
+          {showRank && (
+            <div className="hidden sm:flex items-center space-x-2 text-body-sm text-[#79797C]">
+              <span>Rank</span>
+              <Badge variant="outline" className="border-[#79797C] text-[#79797C]">
+                #1,247
+              </Badge>
+            </div>
+          )}
+          
+          <button className="p-2 text-[#79797C] hover:text-[#28282D] transition-colors duration-200">
+            <Settings className="w-4 h-4" />
+          </button>
 
           <LogoutButton />
         </div>
