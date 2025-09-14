@@ -55,7 +55,7 @@ export function LoginForm({
         <CardHeader className="p-10 pb-8">
           <CardTitle className="text-3xl font-extralight text-stone-800 tracking-wide">Sign In</CardTitle>
           <CardDescription className="text-stone-600 font-light text-lg leading-relaxed mt-4">
-            Enter your credentials to continue your mindful journey
+            Enter your credentials to access your account
           </CardDescription>
         </CardHeader>
         <CardContent className="p-10 pt-0">

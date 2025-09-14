@@ -13,17 +13,17 @@ export default async function Page({
         <div className="flex flex-col gap-6">
           <Card>
             <CardHeader>
-              <CardTitle className="text-2xl">
-                Sorry, something went wrong.
+              <CardTitle className="text-section-header text-[#28282D]">
+                SORRY, SOMETHING WENT WRONG.
               </CardTitle>
             </CardHeader>
             <CardContent>
               {params?.error ? (
-                <p className="text-sm text-muted-foreground">
+                <p className="text-serif-sm text-[#79797C]">
                   Code error: {params.error}
                 </p>
               ) : (
-                <p className="text-sm text-muted-foreground">
+                <p className="text-serif-sm text-[#79797C]">
                   An unspecified error occurred.
                 </p>
               )}

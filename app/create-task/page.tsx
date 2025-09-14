@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/components/ui/toast";
 import { AuthGuard } from "@/components/auth-guard";
 import { Navigation } from "@/components/navigation";
 import { FileUpload } from "@/components/ui/file-upload";
@@ -17,6 +18,7 @@ import { supabase } from "@/lib/supabase";
 
 export default function CreateTaskPage() {
   const router = useRouter();
+  const { showToast } = useToast();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
@@ -85,15 +87,15 @@ export default function CreateTaskPage() {
       const result = await response.json();
 
       if (!response.ok) {
-        alert(result.error || 'Error creating task. Please try again.');
+        showToast(result.error || 'Error creating task. Please try again.', 'error');
         return;
       }
 
-      alert('Task created successfully!');
+      showToast('Task created successfully!', 'success');
       router.push('/challenges');
     } catch (error) {
       console.error('Error creating task:', error);
-      alert('Error creating task. Please try again.');
+      showToast('Error creating task. Please try again.', 'error');
     } finally {
       setLoading(false);
     }

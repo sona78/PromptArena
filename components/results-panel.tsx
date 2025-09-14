@@ -22,7 +22,7 @@ export function ResultsPanel({ result, isRunning }: ResultsPanelProps) {
       <div className="bg-white border-t border-[#79797C] p-4">
         <div className="flex items-center space-x-2 text-[#3073B7]">
           <Clock className="w-4 h-4 animate-spin" />
-          <span className="text-sm font-medium">Executing code...</span>
+          <span className="text-sm font-serif">Executing code...</span>
         </div>
       </div>
     );
@@ -33,7 +33,7 @@ export function ResultsPanel({ result, isRunning }: ResultsPanelProps) {
       <div className="bg-white border-t border-[#79797C] p-4">
         <div className="flex items-center space-x-2 text-[#79797C]">
           <Terminal className="w-4 h-4" />
-          <span className="text-sm">Click &quot;Test Prompt&quot; to run your code</span>
+          <span className="text-sm font-serif">Click &quot;Test Prompt&quot; to run your code</span>
         </div>
       </div>
     );
@@ -49,7 +49,7 @@ export function ResultsPanel({ result, isRunning }: ResultsPanelProps) {
           ) : (
             <XCircle className="w-4 h-4 text-[#953640]" />
           )}
-          <span className="text-sm font-medium text-[#28282D]">
+          <span className="text-sm font-serif font-medium text-[#28282D]">
             Execution {result.success ? 'Successful' : 'Failed'}
           </span>
           {result.execution_time && (
@@ -65,7 +65,7 @@ export function ResultsPanel({ result, isRunning }: ResultsPanelProps) {
         <Card className="bg-[#C5AECF]/5 border-[#C5AECF] p-3">
           <div className="flex items-center space-x-2 mb-2">
             <Terminal className="w-3 h-3 text-[#00656B]" />
-            <span className="text-xs font-medium text-[#28282D]">Output</span>
+            <span className="text-xs font-serif font-medium text-[#28282D]">Output</span>
           </div>
           <pre className="text-xs text-[#28282D] whitespace-pre-wrap font-mono overflow-x-auto">
             {result.output}
@@ -78,7 +78,7 @@ export function ResultsPanel({ result, isRunning }: ResultsPanelProps) {
         <Card className="bg-[#953640]/5 border-[#953640] p-3">
           <div className="flex items-center space-x-2 mb-2">
             <XCircle className="w-3 h-3 text-[#953640]" />
-            <span className="text-xs font-medium text-[#953640]">Error</span>
+            <span className="text-xs font-serif font-medium text-[#953640]">Error</span>
           </div>
           <pre className="text-xs text-[#953640] whitespace-pre-wrap font-mono overflow-x-auto">
             {result.error}
