@@ -40,6 +40,12 @@ interface EditorContextType {
   setPromptQualityScore: (score: number) => void;
   promptMetrics: any;
   setPromptMetrics: (metrics: any) => void;
+  codeEvaluationScore: number | null;
+  setCodeEvaluationScore: (score: number | null) => void;
+  promptChainingScore: number | null;
+  setPromptChainingScore: (score: number | null) => void;
+  codeAccuracyScore: number | null;
+  setCodeAccuracyScore: (score: number | null) => void;
   getAllFiles: (sessionId: string) => Promise<{[filename: string]: string}>;
   executeMultiFile: (sessionId: string, entryPoint?: string) => Promise<void>;
 }
@@ -96,6 +102,9 @@ export function EditorProvider({ children }: { children: ReactNode }) {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [promptQualityScore, setPromptQualityScore] = useState(8.4);
   const [promptMetrics, setPromptMetrics] = useState(null);
+  const [codeEvaluationScore, setCodeEvaluationScore] = useState<number | null>(null);
+  const [promptChainingScore, setPromptChainingScore] = useState<number | null>(null);
+  const [codeAccuracyScore, setCodeAccuracyScore] = useState<number | null>(null);
 
   const setLanguage = (newLanguage: 'javascript' | 'python') => {
     if (!activeFile) {
@@ -273,6 +282,83 @@ export function EditorProvider({ children }: { children: ReactNode }) {
 
       const result = await response.json();
       setExecutionResult(result);
+
+      // After getting the modal response, evaluate the code with Claude
+      try {
+        const evaluationResponse = await fetch('/api/evaluate-code', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            files: files
+          }),
+        });
+
+        const evaluationResult = await evaluationResponse.json();
+        if (evaluationResult.success && evaluationResult.evaluation) {
+          setCodeEvaluationScore(evaluationResult.evaluation.FinalScore);
+        }
+      } catch (evaluationError) {
+        console.error('Code evaluation error:', evaluationError);
+        // Don't fail the entire execution if evaluation fails
+      }
+
+      // After code evaluation, evaluate the prompt sequence
+      try {
+        // Fetch prompt history from the database
+        const { data: session, error: sessionError } = await supabase
+          .from('Sessions')
+          .select('prompts')
+          .eq('session_id', sessionId)
+          .single();
+
+        if (!sessionError && session?.prompts && session.prompts.length > 0) {
+          const promptEvaluationResponse = await fetch('/api/evaluate-prompts', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              prompts: session.prompts
+            }),
+          });
+
+          const promptEvaluationResult = await promptEvaluationResponse.json();
+          if (promptEvaluationResult.success && promptEvaluationResult.evaluation) {
+            setPromptChainingScore(promptEvaluationResult.evaluation.PromptChainingScore);
+          }
+        }
+      } catch (promptEvaluationError) {
+        console.error('Prompt evaluation error:', promptEvaluationError);
+        // Don't fail the entire execution if prompt evaluation fails
+      }
+
+      // After prompt evaluation, evaluate code accuracy based on execution output
+      try {
+        // Use output if successful, otherwise use error message
+        const executionText = result.success ? result.output : result.error;
+        
+        if (executionText) {
+          const accuracyEvaluationResponse = await fetch('/api/evaluate-accuracy', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              output: executionText
+            }),
+          });
+
+          const accuracyEvaluationResult = await accuracyEvaluationResponse.json();
+          if (accuracyEvaluationResult.success && accuracyEvaluationResult.evaluation) {
+            setCodeAccuracyScore(accuracyEvaluationResult.evaluation.AccuracyScore);
+          }
+        }
+      } catch (accuracyEvaluationError) {
+        console.error('Code accuracy evaluation error:', accuracyEvaluationError);
+        // Don't fail the entire execution if accuracy evaluation fails
+      }
     } catch (error) {
       setExecutionResult({
         success: false,
@@ -337,6 +423,12 @@ export function EditorProvider({ children }: { children: ReactNode }) {
       setPromptQualityScore,
       promptMetrics,
       setPromptMetrics,
+      codeEvaluationScore,
+      setCodeEvaluationScore,
+      promptChainingScore,
+      setPromptChainingScore,
+      codeAccuracyScore,
+      setCodeAccuracyScore,
       getAllFiles,
       executeMultiFile
     }}>

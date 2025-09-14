@@ -15,11 +15,15 @@ import {
   Star,
   Clock,
   History,
-  File
+  File,
+  Mic,
+  MicOff,
+  Loader2
 } from "lucide-react";
 import { useEditor } from "./editor-context";
 import { InfiniteScrollContainer } from "./infinite-scroll-container";
 import { supabase } from '@/lib/supabase';
+import { useVoiceRecording } from '@/hooks/use-voice-recording';
 import * as tokenizer from '@anthropic-ai/tokenizer';
 
 interface PromptPanelProps {
@@ -34,6 +38,15 @@ export function PromptPanel({ sessionId }: PromptPanelProps) {
   const [lastPromptTokenCount, setLastPromptTokenCount] = useState(0);
   const [lastResponseTokenCount, setLastResponseTokenCount] = useState(0);
   const { code, setCode, isLoading, setIsLoading, promptQualityScore, setPromptQualityScore, promptMetrics, setPromptMetrics, activeFile } = useEditor();
+  
+  // Voice recording hook
+  const { 
+    isRecording, 
+    isTranscribing, 
+    startRecording, 
+    stopRecording, 
+    error: voiceError 
+  } = useVoiceRecording();
 
   // Function to save prompt to database
   const savePromptToDatabase = async (promptText: string) => {
@@ -105,6 +118,18 @@ export function PromptPanel({ sessionId }: PromptPanelProps) {
     // Simple estimation: 1 token ≈ 4 characters for English text
     return Math.ceil(prompt.length / 4);
   }, [prompt]);
+
+  // Handle voice recording toggle
+  const handleVoiceToggle = async () => {
+    if (isRecording) {
+      const transcribedText = await stopRecording();
+      if (transcribedText) {
+        setPrompt(prev => prev + (prev ? ' ' : '') + transcribedText);
+      }
+    } else {
+      await startRecording();
+    }
+  };
 
   const handleSubmit = async () => {
     if (!prompt.trim()) {
@@ -357,9 +382,33 @@ zPlease try again or check your configuration.`);
           <div className="p-4 space-y-4">
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <label className="text-sm font-medium text-gray-300">
-                  Your Prompt
-                </label>
+                <div className="flex items-center space-x-2">
+                  <label className="text-sm font-medium text-gray-300">
+                    Your Prompt
+                  </label>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={`h-6 w-6 p-0 transition-colors ${
+                      isRecording 
+                        ? 'text-red-400 hover:text-red-300' 
+                        : isTranscribing
+                        ? 'text-blue-400'
+                        : 'text-gray-400 hover:text-gray-300'
+                    }`}
+                    onClick={handleVoiceToggle}
+                    disabled={isTranscribing || isLoading}
+                    title={isRecording ? 'Stop recording' : isTranscribing ? 'Transcribing...' : 'Start voice recording'}
+                  >
+                    {isTranscribing ? (
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                    ) : isRecording ? (
+                      <MicOff className="w-3 h-3" />
+                    ) : (
+                      <Mic className="w-3 h-3" />
+                    )}
+                  </Button>
+                </div>
                 {activeFile && (
                   <div className="flex items-center space-x-1 text-xs text-gray-400">
                     <File className="w-3 h-3" />
@@ -378,8 +427,27 @@ zPlease try again or check your configuration.`);
                 className="min-h-32 bg-gray-900 border-gray-700 text-gray-100 resize-none focus:border-blue-500"
                 disabled={isLoading}
               />
-              <div className="text-xs text-blue-400 font-medium">
-                {tokenCount} tokens
+              <div className="flex items-center justify-between">
+                <div className="text-xs text-blue-400 font-medium">
+                  {tokenCount} tokens
+                </div>
+                {voiceError && (
+                  <div className="text-xs text-red-400">
+                    {voiceError}
+                  </div>
+                )}
+                {isRecording && (
+                  <div className="flex items-center space-x-1 text-xs text-red-400">
+                    <div className="w-2 h-2 bg-red-400 rounded-full animate-pulse" />
+                    <span>Recording...</span>
+                  </div>
+                )}
+                {isTranscribing && (
+                  <div className="flex items-center space-x-1 text-xs text-blue-400">
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    <span>Transcribing...</span>
+                  </div>
+                )}
               </div>
             </div>
 
