@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Button } from "./ui/button";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/client";
 import { LogoutButton } from "./logout-button";
 import { useEffect, useState } from "react";
 import { User } from "@supabase/supabase-js";
@@ -12,6 +12,8 @@ export function AuthButton() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const supabase = createClient();
+    
     supabase.auth.getUser().then(({ data: { user } }) => {
       setUser(user);
       setLoading(false);

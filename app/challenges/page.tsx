@@ -241,7 +241,7 @@ export default function DashboardPage() {
       iconColor: "#46295A"
     },
     {
-      title: "MACHINE LEARNING",
+      title: "Machine Learning",
       icon: Brain,
       taskTypes: [2], // ML tasks
       searchPlaceholder: "Search ML challenges...",

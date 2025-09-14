@@ -57,7 +57,7 @@ export function FileSystemSidebar({ sessionId }: FileSystemSidebarProps) {
       }
 
       // Build file tree structure
-      const fileTree = buildFileTree(data || []);
+      const fileTree = buildFileTree((data || []) as any[]);
 
       // Only add test file to the file tree if it exists in storage and is not already in the list
       if (testFile && !fileTree.some(f => f.name === testFile)) {
@@ -95,12 +95,12 @@ export function FileSystemSidebar({ sessionId }: FileSystemSidebarProps) {
     }
   }, [testFile, sessionId]); // fetchFiles would cause infinite re-renders if added
 
-  const buildFileTree = (items: Array<Record<string, unknown>>): FileItem[] => {
+  const buildFileTree = (items: Array<any>): FileItem[] => {
     const tree: FileItem[] = [];
 
     items.forEach(item => {
       const fileItem: FileItem = {
-        name: item.name,
+        name: item.name as string,
         path: `${sessionId}/${item.name}`,
         type: item.metadata ? 'file' : 'folder',
         isExpanded: false
@@ -129,7 +129,7 @@ export function FileSystemSidebar({ sessionId }: FileSystemSidebarProps) {
             });
 
           if (!error && data) {
-            folder.children = buildFileTree(data);
+            folder.children = buildFileTree(data as any[]);
           }
         } catch (err) {
           console.error('Error fetching folder contents:', err);
@@ -182,6 +182,12 @@ export function FileSystemSidebar({ sessionId }: FileSystemSidebarProps) {
         setTimeout(() => setError(null), 750); // Clear error after 3 seconds
         return;
       }
+
+      // Force refresh the file list before opening to ensure we have the latest file data
+      if (activeFile?.name !== item.name) {
+        await fetchFiles();
+      }
+
       await openFile(item.path, item.name);
     }
   };

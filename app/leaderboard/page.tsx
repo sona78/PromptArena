@@ -10,89 +10,99 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ChevronDown, Trophy, Medal, Award } from "lucide-react";
-import { useState } from "react";
+import { ChevronDown, Trophy, Medal, Award, Loader2 } from "lucide-react";
+import { useState, useEffect } from "react";
 
 interface LeaderboardEntry {
   rank: number;
+  user_id: string;
   username: string;
-  verbiageScore: number;
-  numPrompts: number;
-  tokenInput: number;
-  codePerformance: number;
+  averageScore: number;
+  maxScore: number;
+  totalSessions: number;
+  totalPrompts: number;
+  challengesCompleted: number;
+  taskTypesCompleted: number;
+  avgPromptQuality: number;
+  avgCodeEvaluation: number;
+  avgAccuracy: number;
+  avgPromptChaining: number;
+  avgFinalScore: number;
+  tokenInputTotal: number;
+  tokenOutputTotal: number;
+  lastSubmission: string;
 }
 
-// Mock data for demonstration
-const mockLeaderboardData: LeaderboardEntry[] = [
-  {
-    rank: 1,
-    username: "alice_dev",
-    verbiageScore: 95.2,
-    numPrompts: 147,
-    tokenInput: 12450,
-    codePerformance: 92.8,
-  },
-  {
-    rank: 2,
-    username: "bob_engineer",
-    verbiageScore: 93.1,
-    numPrompts: 134,
-    tokenInput: 11230,
-    codePerformance: 89.5,
-  },
-  {
-    rank: 3,
-    username: "charlie_ai",
-    verbiageScore: 91.7,
-    numPrompts: 128,
-    tokenInput: 10890,
-    codePerformance: 87.2,
-  },
-  {
-    rank: 4,
-    username: "diana_prompt",
-    verbiageScore: 90.3,
-    numPrompts: 115,
-    tokenInput: 9876,
-    codePerformance: 85.9,
-  },
-  {
-    rank: 5,
-    username: "eve_coder",
-    verbiageScore: 88.9,
-    numPrompts: 109,
-    tokenInput: 9234,
-    codePerformance: 84.1,
-  },
-];
+interface Task {
+  task_id: string;
+  name: string;
+  type: number;
+}
+
+interface LeaderboardResponse {
+  success: boolean;
+  leaderboard: LeaderboardEntry[];
+  tasks: Task[];
+  totalUsers: number;
+  filterApplied: string;
+}
+
 
 export default function LeaderboardPage() {
-  const [selectedModel, setSelectedModel] = useState("All Models");
+  const [selectedChallenge, setSelectedChallenge] = useState("all");
   const [selectedCategory, setSelectedCategory] = useState("All Categories");
-  const [selectedMetric, setSelectedMetric] = useState("Overall Score");
+  const [selectedMetric, setSelectedMetric] = useState("Average Score");
+  const [leaderboardData, setLeaderboardData] = useState<LeaderboardEntry[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const models = ["All Models", "GPT-4", "Claude-3", "Gemini", "LLaMA-2"];
   const categories = ["All Categories", "Frontend", "Backend", "ML"];
-  
-  const getCategoryColor = (category: string) => {
-    switch (category) {
-      case "Frontend":
-        return "bg-[#C5AECF] text-white border-[#C5AECF]";
-      case "Backend":
-        return "bg-[#46295A] text-white border-[#46295A]";
-      case "ML":
-        return "bg-[#D79D00] text-white border-[#D79D00]";
-      default:
-        return "bg-white text-[#28282D] border-[#28282D]";
+  const metrics = [
+    "Average Score",
+    "Max Score",
+    "Final Score (Metrics)",
+    "Prompt Chaining",
+    "Code Evaluation",
+    "Code Accuracy",
+    "Total Sessions",
+    "Challenges Completed",
+  ];
+
+  // Fetch leaderboard data
+  const fetchLeaderboard = async (challengeFilter: string = "all") => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const url = challengeFilter === "all"
+        ? '/api/leaderboard'
+        : `/api/leaderboard?taskId=${challengeFilter}`;
+
+      const response = await fetch(url);
+      const data: LeaderboardResponse = await response.json();
+
+      if (data.success) {
+        setLeaderboardData(data.leaderboard);
+        setTasks(data.tasks);
+      } else {
+        setError('Failed to load leaderboard data');
+      }
+    } catch (err) {
+      console.error('Error fetching leaderboard:', err);
+      setError('Failed to load leaderboard data');
+    } finally {
+      setLoading(false);
     }
   };
-  const metrics = [
-    "Overall Score",
-    "Verbiage Score",
-    "Number of Prompts",
-    "Token Input",
-    "Code Performance",
-  ];
+
+  useEffect(() => {
+    fetchLeaderboard(selectedChallenge);
+  }, [selectedChallenge]);
+
+  const handleChallengeChange = (challengeId: string) => {
+    setSelectedChallenge(challengeId);
+  };
 
   const getRankIcon = (rank: number) => {
     switch (rank) {
@@ -124,105 +134,159 @@ export default function LeaderboardPage() {
 
         <div className="max-w-7xl mx-auto px-6 py-8">
           <div className="mb-8">
-            <h1 className="text-section-header-lg text-[#28282D] mb-2">LEADERBOARD</h1>
-            <p className="text-serif-lg text-[#79797C]">Top performing prompt engineers in our community.</p>
+            <h1 className="text-title-lg text-gray-900 mb-2">Leaderboard</h1>
+            <p className="text-body-lg text-gray-600">Top performing prompt engineers in our community.</p>
           </div>
 
           {/* Filter Dropdowns */}
-          <div className="flex flex-wrap gap-4 justify-center mb-8">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button className="min-w-[180px] justify-between rounded-full font-display-serif font-bold tracking-wide text-base px-6 py-3 bg-white text-[#28282D] border-[#28282D] hover:bg-gray-50">
-                  {selectedModel}
-                  <ChevronDown className="w-4 h-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                {models.map((model) => (
-                  <DropdownMenuItem key={model} onClick={() => setSelectedModel(model)}>
-                    {model}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+          <Card className="bg-white border border-gray-200 mb-6">
+            <CardContent className="p-6">
+              <div className="flex flex-wrap gap-4 justify-center">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="min-w-[200px] justify-between">
+                      {selectedChallenge === "all" ? "All Challenges" :
+                        tasks.find(t => t.task_id === selectedChallenge)?.name || "Select Challenge"}
+                      <ChevronDown className="w-4 h-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="max-h-60 overflow-y-auto">
+                    <DropdownMenuItem onClick={() => handleChallengeChange("all")}>
+                      All Challenges
+                    </DropdownMenuItem>
+                    {tasks.map((task) => (
+                      <DropdownMenuItem key={task.task_id} onClick={() => handleChallengeChange(task.task_id)}>
+                        <div className="flex items-center justify-between w-full">
+                          <span className="truncate">{task.name}</span>
+                          <span className="ml-2 text-xs bg-gray-100 px-2 py-1 rounded">
+                            Type {task.type}
+                          </span>
+                        </div>
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
 
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button className={`min-w-[180px] justify-between rounded-full font-display-serif font-bold tracking-wide text-base px-6 py-3 hover:opacity-90 ${getCategoryColor(selectedCategory)}`}>
-                  {selectedCategory}
-                  <ChevronDown className="w-4 h-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                {categories.map((category) => (
-                  <DropdownMenuItem key={category} onClick={() => setSelectedCategory(category)}>
-                    {category}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="min-w-[160px] justify-between">
+                      {selectedCategory}
+                      <ChevronDown className="w-4 h-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    {categories.map((category) => (
+                      <DropdownMenuItem key={category} onClick={() => setSelectedCategory(category)}>
+                        {category}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
 
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button className="min-w-[180px] justify-between rounded-full font-display-serif font-bold tracking-wide text-base px-6 py-3 bg-white text-[#28282D] border-[#28282D] hover:bg-gray-50">
-                  {selectedMetric}
-                  <ChevronDown className="w-4 h-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                {metrics.map((metric) => (
-                  <DropdownMenuItem key={metric} onClick={() => setSelectedMetric(metric)}>
-                    {metric}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="min-w-[160px] justify-between">
+                      {selectedMetric}
+                      <ChevronDown className="w-4 h-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    {metrics.map((metric) => (
+                      <DropdownMenuItem key={metric} onClick={() => setSelectedMetric(metric)}>
+                        {metric}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Leaderboard Table */}
           <Card className="bg-white border border-gray-200">
             <CardContent className="p-0">
-              <div className="overflow-hidden">
-                <div className="bg-[#79797C] px-6 py-4 border-b border-gray-200 shadow-md">
-                  <div className="grid grid-cols-6 gap-4 font-display-serif font-bold tracking-wide text-sm text-white">
-                    <div className="text-left">RANK</div>
-                    <div className="text-left">USERNAME</div>
-                    <div className="text-center">VERBIAGE SCORE</div>
-                    <div className="text-center">PROMPTS</div>
-                    <div className="text-center">TOKEN INPUT</div>
-                    <div className="text-center">CODE PERFORMANCE</div>
-                  </div>
+              {loading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+                  <span className="ml-2 text-gray-600">Loading leaderboard...</span>
                 </div>
-                
-                <div className="divide-y divide-gray-100">
-                  {mockLeaderboardData.map((entry, index) => (
-                    <div
-                      key={entry.username}
-                      className={`grid grid-cols-6 gap-4 px-6 py-4 text-body-sm hover:bg-gray-50 items-center ${
-                        index < 3 ? 'bg-blue-50/30' : 'bg-white'
-                      }`}
-                    >
-                      <div className="flex items-center space-x-3">
-                        {getRankIcon(entry.rank)}
-                        <span className="text-body text-gray-700">#{entry.rank}</span>
-                      </div>
-                      <div className="text-subtitle text-[#28282D]">{entry.username}</div>
-                      <div className="text-center">
-                        <span className={getPercentileColor(entry.verbiageScore)}>
-                          {entry.verbiageScore}%
-                        </span>
-                      </div>
-                      <div className="text-center text-body text-gray-700">{entry.numPrompts}</div>
-                      <div className="text-center text-body text-gray-700">{entry.tokenInput.toLocaleString()}</div>
-                      <div className="text-center">
-                        <span className={getPercentileColor(entry.codePerformance)}>
-                          {entry.codePerformance}%
-                        </span>
-                      </div>
+              ) : error ? (
+                <div className="text-center py-12 text-red-600">
+                  {error}
+                </div>
+              ) : leaderboardData.length === 0 ? (
+                <div className="text-center py-12 text-gray-500">
+                  No leaderboard data available for the selected challenge.
+                </div>
+              ) : (
+                <div className="overflow-hidden overflow-x-auto">
+                  <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
+                    <div className="grid grid-cols-10 gap-3 text-subtitle-sm text-gray-700 min-w-[1200px]">
+                      <div className="text-left">Rank</div>
+                      <div className="text-left">Username</div>
+                      <div className="text-center">Avg Score</div>
+                      <div className="text-center">Final Score</div>
+                      <div className="text-center">Chaining</div>
+                      <div className="text-center">Code Eval</div>
+                      <div className="text-center">Accuracy</div>
+                      <div className="text-center">Sessions</div>
+                      <div className="text-center">Prompts</div>
+                      <div className="text-center">Challenges</div>
                     </div>
-                  ))}
+                  </div>
+
+                  <div className="divide-y divide-gray-100">
+                    {leaderboardData.map((entry, index) => (
+                      <div
+                        key={entry.user_id}
+                        className={`grid grid-cols-10 gap-3 px-6 py-4 text-body-sm hover:bg-gray-50 min-w-[1200px] ${
+                          index < 3 ? 'bg-blue-50/30' : 'bg-white'
+                        }`}
+                      >
+                        <div className="flex items-center space-x-2">
+                          {getRankIcon(entry.rank)}
+                          <span className="text-body text-gray-700">#{entry.rank}</span>
+                        </div>
+                        <div className="text-subtitle text-gray-900 truncate">{entry.username}</div>
+                        <div className="text-center">
+                          <span className={getPercentileColor(entry.averageScore)}>
+                            {entry.averageScore}
+                          </span>
+                        </div>
+                        <div className="text-center">
+                          <span className={getPercentileColor(entry.avgFinalScore * 10)}>
+                            {entry.avgFinalScore.toFixed(1)}
+                          </span>
+                        </div>
+                        <div className="text-center">
+                          <span className={getPercentileColor(entry.avgPromptChaining)}>
+                            {entry.avgPromptChaining.toFixed(0)}%
+                          </span>
+                        </div>
+                        <div className="text-center">
+                          <span className={getPercentileColor(entry.avgCodeEvaluation)}>
+                            {entry.avgCodeEvaluation.toFixed(0)}%
+                          </span>
+                        </div>
+                        <div className="text-center">
+                          <span className={getPercentileColor(entry.avgAccuracy)}>
+                            {entry.avgAccuracy.toFixed(0)}%
+                          </span>
+                        </div>
+                        <div className="text-center text-body text-gray-700">{entry.totalSessions}</div>
+                        <div className="text-center text-body text-gray-700">{entry.totalPrompts}</div>
+                        <div className="text-center text-body text-gray-700">{entry.challengesCompleted}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {leaderboardData.length > 0 && (
+                    <div className="bg-gray-50 px-6 py-3 border-t border-gray-200 text-center text-sm text-gray-600">
+                      Showing {leaderboardData.length} users • Ranked by average score across all sessions
+                    </div>
+                  )}
                 </div>
-              </div>
+              )}
             </CardContent>
           </Card>
         </div>

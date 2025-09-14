@@ -18,6 +18,7 @@ import {
 import { useEditor } from "./editor-context";
 import { supabase } from '@/lib/supabase';
 import { useVoiceRecording } from '@/hooks/use-voice-recording';
+import { countTokens } from '@anthropic-ai/tokenizer';
 
 interface PromptPanelProps {
   sessionId: string;
@@ -95,44 +96,88 @@ export function PromptPanel({ sessionId }: PromptPanelProps) {
         return;
       }
 
-      // Extract persistent fields from current feedback
+      // Extract persistent fields from current feedback (avoiding duplication)
       const currentFeedback = session?.feedback || {};
-      const persistentFields: Record<string, unknown> = {};
+      let persistentData: Record<string, unknown> = {};
 
-      // Preserve persistent fields that should not be removed
-      if (typeof currentFeedback === 'object' && currentFeedback !== null) {
-        if ('promptChainingScore' in currentFeedback) {
-          persistentFields.promptChainingScore = currentFeedback.promptChainingScore;
-        }
-        if ('codeEvaluationScore' in currentFeedback) {
-          persistentFields.codeEvaluationScore = currentFeedback.codeEvaluationScore;
-        }
-        if ('codeAccuracyScore' in currentFeedback) {
-          persistentFields.codeAccuracyScore = currentFeedback.codeAccuracyScore;
-        }
+      // Extract persistent fields from current feedback, preferring root level
+      if (currentFeedback.promptChainingScore !== null && currentFeedback.promptChainingScore !== undefined) {
+        persistentData.promptChainingScore = currentFeedback.promptChainingScore;
+      }
+      if (currentFeedback.codeEvaluationScore !== null && currentFeedback.codeEvaluationScore !== undefined) {
+        persistentData.codeEvaluationScore = currentFeedback.codeEvaluationScore;
+      }
+      if (currentFeedback.codeAccuracyScore !== null && currentFeedback.codeAccuracyScore !== undefined) {
+        persistentData.codeAccuracyScore = currentFeedback.codeAccuracyScore;
+      }
+      if (currentFeedback.promptTokenCount !== null && currentFeedback.promptTokenCount !== undefined) {
+        persistentData.promptTokenCount = currentFeedback.promptTokenCount;
+      }
+      if (currentFeedback.responseTokenCount !== null && currentFeedback.responseTokenCount !== undefined) {
+        persistentData.responseTokenCount = currentFeedback.responseTokenCount;
       }
 
-      // Overwrite feedback state with new submission, keeping persistent fields
+      // Update with new data from current submission
+      persistentData.metrics = metrics;
+      persistentData.qualityScore = qualityScore;
+
+      // Always update token counts when available (from current submission)
+      if (lastPromptTokenCount !== null && lastPromptTokenCount !== undefined && lastPromptTokenCount > 0) {
+        persistentData.promptTokenCount = lastPromptTokenCount;
+      }
+      if (lastResponseTokenCount !== null && lastResponseTokenCount !== undefined && lastResponseTokenCount > 0) {
+        persistentData.responseTokenCount = lastResponseTokenCount;
+      }
+
+      // Update with state values if they are not null/undefined
+      if (promptChainingScore !== null && promptChainingScore !== undefined) {
+        persistentData.promptChainingScore = promptChainingScore;
+      }
+      if (codeEvaluationScore !== null && codeEvaluationScore !== undefined) {
+        persistentData.codeEvaluationScore = codeEvaluationScore;
+      }
+      if (codeAccuracyScore !== null && codeAccuracyScore !== undefined) {
+        persistentData.codeAccuracyScore = codeAccuracyScore;
+      }
+
+      // Create clean feedback object without duplication
       const updatedFeedback = {
-        ...persistentFields,
+        ...persistentData,
         timestamp: new Date().toISOString(),
-        type: 'prompt_analysis',
-        data: {
-          metrics: metrics,
-          qualityScore: qualityScore,
-          promptTokenCount: lastPromptTokenCount,
-          responseTokenCount: lastResponseTokenCount,
-          // Include current scores from state (these will be the latest values)
-          promptChainingScore: promptChainingScore,
-          codeEvaluationScore: codeEvaluationScore,
-          codeAccuracyScore: codeAccuracyScore
-        }
+        type: 'prompt_analysis'
       };
 
-      // Update session with new feedback (complete overwrite)
+      // Calculate weighted overall score
+      const calculateOverallScore = (feedback: any): number => {
+        const promptQuality = feedback.qualityScore || 0;
+        const promptChaining = feedback.promptChainingScore || 0;
+        const codeEvaluation = feedback.codeEvaluationScore || 0;
+        const codeAccuracy = feedback.codeAccuracyScore || 0;
+
+        // Weights: 10% prompt quality, 15% prompt chaining, 30% code evaluation, 45% code accuracy
+        // Note: prompt quality is on scale 0-10, others are 0-1, so normalize prompt quality
+        const normalizedPromptQuality = promptQuality / 10;
+
+        const weightedScore = (
+          (0.10 * normalizedPromptQuality) +
+          (0.15 * promptChaining) +
+          (0.30 * codeEvaluation) +
+          (0.45 * codeAccuracy)
+        );
+
+        // Return score as percentage (0-100)
+        return Math.round(weightedScore * 100);
+      };
+
+      const overallScore = calculateOverallScore(updatedFeedback);
+
+      // Update session with new feedback and calculated score
       const { error: updateError } = await supabase
         .from('Sessions')
-        .update({ feedback: updatedFeedback })
+        .update({
+          feedback: updatedFeedback,
+          score: overallScore
+        })
         .eq('session_id', sessionId);
 
       if (updateError) {
@@ -186,52 +231,37 @@ export function PromptPanel({ sessionId }: PromptPanelProps) {
 
       const feedback = session.feedback || {};
 
-      // Since feedback is now a single object (not an array), check if it has the expected structure
-      let recentAnalysis = null;
+      // Check if feedback has the expected structure (clean, no duplication)
       if (typeof feedback === 'object' && feedback !== null && 'type' in feedback && feedback.type === 'prompt_analysis') {
-        recentAnalysis = feedback;
-      }
+        // Restore the metrics and scores directly from the feedback object
+        if (feedback.metrics) {
+          setPromptMetrics(feedback.metrics);
+        }
+        if (feedback.qualityScore) {
+          setPromptQualityScore(feedback.qualityScore);
+        }
 
-      if (
-        recentAnalysis &&
-        typeof recentAnalysis === "object" &&
-        "data" in recentAnalysis &&
-        recentAnalysis.data &&
-        typeof recentAnalysis.data === "object"
-      ) {
-        const data = recentAnalysis.data as {
-          metrics?: Record<string, unknown>;
-          qualityScore?: number;
-          promptTokenCount?: number;
-          responseTokenCount?: number;
-          promptChainingScore?: number;
-          codeEvaluationScore?: number;
-          codeAccuracyScore?: number;
-        };
+        // Token counts
+        if (feedback.promptTokenCount) {
+          setLastPromptTokenCount(feedback.promptTokenCount);
+        }
+        if (feedback.responseTokenCount) {
+          setLastResponseTokenCount(feedback.responseTokenCount);
+        }
 
-        // Restore the metrics and scores from the most recent analysis
-        if (data.metrics) {
-          setPromptMetrics(data.metrics);
-        }
-        if (data.qualityScore) {
-          setPromptQualityScore(data.qualityScore);
-        }
-        if (data.promptTokenCount) {
-          setLastPromptTokenCount(data.promptTokenCount);
-        }
-        if (data.responseTokenCount) {
-          setLastResponseTokenCount(data.responseTokenCount);
-        }
-        // Restore prompt chaining data from feedback object
+        // Restore evaluation scores
         // These will be displayed in the left file system panel
-        if (data.promptChainingScore !== undefined) {
-          setPromptChainingScore(data.promptChainingScore);
+        if (feedback.promptChainingScore !== undefined) {
+          console.log('Restoring promptChainingScore from feedback:', feedback.promptChainingScore);
+          setPromptChainingScore(feedback.promptChainingScore);
         }
-        if (data.codeEvaluationScore !== undefined) {
-          setCodeEvaluationScore(data.codeEvaluationScore);
+        if (feedback.codeEvaluationScore !== undefined) {
+          console.log('Restoring codeEvaluationScore from feedback:', feedback.codeEvaluationScore);
+          setCodeEvaluationScore(feedback.codeEvaluationScore);
         }
-        if (data.codeAccuracyScore !== undefined) {
-          setCodeAccuracyScore(data.codeAccuracyScore);
+        if (feedback.codeAccuracyScore !== undefined) {
+          console.log('Restoring codeAccuracyScore from feedback:', feedback.codeAccuracyScore);
+          setCodeAccuracyScore(feedback.codeAccuracyScore);
         }
       }
     } catch (error) {
@@ -247,8 +277,14 @@ export function PromptPanel({ sessionId }: PromptPanelProps) {
 
   // Calculate token count using Anthropic tokenizer
   const tokenCount = useMemo(() => {
-    // Simple estimation: 1 token ≈ 4 characters for English text
-    return Math.ceil(prompt.length / 4);
+    if (!prompt.trim()) return 0;
+    try {
+      return countTokens(prompt);
+    } catch (error) {
+      console.error('Error counting tokens:', error);
+      // Fallback to character-based estimation if tokenizer fails
+      return Math.ceil(prompt.length / 4);
+    }
   }, [prompt]);
 
   // Handle voice recording toggle
@@ -269,8 +305,15 @@ export function PromptPanel({ sessionId }: PromptPanelProps) {
       return;
     }
 
-    // Store the token count of the submitted prompt using simple estimation
-    const submittedTokenCount = Math.ceil(prompt.length / 4);
+    // Store the token count of the submitted prompt using proper tokenizer
+    let submittedTokenCount;
+    try {
+      submittedTokenCount = countTokens(prompt);
+    } catch (error) {
+      console.error('Error counting prompt tokens:', error);
+      // Fallback to character-based estimation
+      submittedTokenCount = Math.ceil(prompt.length / 4);
+    }
     setLastPromptTokenCount(submittedTokenCount);
 
     setIsLoading(true);
@@ -293,53 +336,53 @@ ${code}
 Return only the complete code, no explanations.`;
     }
 
-    const evaluationPrompt = `You are a prompt evaluation assistant. Given a user-supplied prompt (the “query”), you will evaluate its effectiveness according to the following metrics (derived from the Anthropic Prompt Engineering guidelines):
+    const evaluationPrompt = `You are a prompt evaluation assistant. Given a user-supplied prompt (the "query"), you will evaluate its effectiveness according to the following metrics (derived from the Anthropic Prompt Engineering guidelines):
 
         1. Clarity & Directness — Is the prompt clear, unambiguous, and direct about what is asked?
-        2. Role Definition / System Context — Does the prompt give you a role or system context (e.g. “You are …”) so you understand how to respond?
+        2. Role Definition / System Context — Does the prompt give you a role or system context (e.g. "You are …") so you understand how to respond?
         3. Specificity / Constraints — Does the prompt include specific constraints (format, tone, length, domain, audience, etc.)?
         4. Use of Examples or Few-Shot Guidance — Does it use examples to illustrate what is wanted or show style/format?
         5. Chain of Thought / Reasoning Encouragement — Does it ask the model to think step by step or explain reasoning when needed?
         6. Prefilling / Preface / Structured Tags — Are there structured tags or prefilling that help guide response structure?
         7. Conciseness / Avoiding Redundancy — Is the prompt free from unnecessary words or confusing redundancy?
         8. Suitability of Tone / Audience — Is the tone and style appropriate for the target audience and use case?
-        9. Success Criteria / Eval Metrics — Does the prompt define success criteria or what “good” looks like?
+        9. Success Criteria / Eval Metrics — Does the prompt define success criteria or what "good" looks like?
 
         ---
 
         Task:
 
-        Given the user prompt below, evaluate it on each metric giving it a score out of 10.
+        Given the user prompt below, evaluate it on each metric giving it a score out of 10 and a brief justification for that score.
         Then average the scores to get a final score out of 10.
-        Return the final score in a json format. It should have 10 keys, one for each metric and the last as a final score.
+        Return the evaluation in a json format with both scores and justifications.
         Your response should be in the following format:
         {
-            "clarity": 10,
-            "role definition": 10,
-            "specificity": 10,
-            "use of examples": 10,
-            "chain of thought": 10,
-            "prefilling": 10,
-            "conciseness": 10,
-            "suitability of tone": 10,
-            "success criteria": 10
-            "final score": 10,
+            "clarity": {"score": 10, "justification": "Brief explanation of why this score was given"},
+            "role definition": {"score": 10, "justification": "Brief explanation of why this score was given"},
+            "specificity": {"score": 10, "justification": "Brief explanation of why this score was given"},
+            "use of examples": {"score": 10, "justification": "Brief explanation of why this score was given"},
+            "chain of thought": {"score": 10, "justification": "Brief explanation of why this score was given"},
+            "prefilling": {"score": 10, "justification": "Brief explanation of why this score was given"},
+            "conciseness": {"score": 10, "justification": "Brief explanation of why this score was given"},
+            "suitability of tone": {"score": 10, "justification": "Brief explanation of why this score was given"},
+            "success criteria": {"score": 10, "justification": "Brief explanation of why this score was given"},
+            "final score": 10
         }
 
         EXAMPLE:
         User Prompt: "Write a prompt that generates a story about a dog."
         Response:
         {
-            "clarity": 5,
-            "role definition": 6,
-            "specificity": 4,
-            "use of examples": 0,
-            "chain of thought": 8,
-            "prefilling": 5,
-            "conciseness": 10,
-            "suitability of tone": 3,
-            "success criteria": 4,
-            "final score": 5.5,
+            "clarity": {"score": 5, "justification": "The request is clear but lacks specific details about story length, style, or target audience"},
+            "role definition": {"score": 6, "justification": "No explicit role is defined, but the task implies a creative writing role"},
+            "specificity": {"score": 4, "justification": "Very vague - no constraints on length, style, tone, or specific requirements"},
+            "use of examples": {"score": 0, "justification": "No examples provided to illustrate desired output style or format"},
+            "chain of thought": {"score": 8, "justification": "The request is straightforward and doesn't require complex reasoning steps"},
+            "prefilling": {"score": 5, "justification": "No structured format or prefilling guidance provided"},
+            "conciseness": {"score": 10, "justification": "Very brief and to the point without unnecessary words"},
+            "suitability of tone": {"score": 3, "justification": "No tone specified, making it unclear what style is expected"},
+            "success criteria": {"score": 4, "justification": "No clear definition of what makes a good story or successful output"},
+            "final score": 5.5
         }
 
         ---
@@ -379,8 +422,15 @@ Return only the complete code, no explanations.`;
         cleanedCode = cleanedCode.replace(/^```\w*\n?/gm, '');
         cleanedCode = cleanedCode.replace(/\n?```$/gm, '');
 
-        // Count tokens in Claude's response using simple estimation
-        const responseTokenCount = Math.ceil(cleanedCode.length / 4);
+        // Count tokens in Claude's response using proper tokenizer
+        let responseTokenCount;
+        try {
+          responseTokenCount = countTokens(cleanedCode);
+        } catch (error) {
+          console.error('Error counting response tokens:', error);
+          // Fallback to character-based estimation
+          responseTokenCount = Math.ceil(cleanedCode.length / 4);
+        }
         setLastResponseTokenCount(responseTokenCount);
 
         // Update the editor with cleaned response
@@ -411,10 +461,49 @@ zPlease try again or check your configuration.`);
         try {
           // Extract JSON from Claude's response (it might have extra text)
           const content = evaluationData.content;
-          const jsonMatch = content.match(/\{[\s\S]*?\}/);
+          
+          // Try multiple JSON extraction methods
+          let evaluation = null;
+          
+          // Method 1: Try to parse the entire content as JSON
+          try {
+            evaluation = JSON.parse(content);
+          } catch (e1) {
+            // Method 2: Find JSON object with proper bracket matching
+            const jsonStart = content.indexOf('{');
+            if (jsonStart !== -1) {
+              let bracketCount = 0;
+              let jsonEnd = -1;
+              
+              for (let i = jsonStart; i < content.length; i++) {
+                if (content[i] === '{') bracketCount++;
+                if (content[i] === '}') bracketCount--;
+                if (bracketCount === 0) {
+                  jsonEnd = i;
+                  break;
+                }
+              }
+              
+              if (jsonEnd !== -1) {
+                const jsonString = content.substring(jsonStart, jsonEnd + 1);
+                try {
+                  evaluation = JSON.parse(jsonString);
+                } catch (e2) {
+                  // Method 3: Fallback to regex (original method)
+                  const jsonMatch = content.match(/\{[\s\S]*?\}/);
+                  if (jsonMatch) {
+                    try {
+                      evaluation = JSON.parse(jsonMatch[0]);
+                    } catch (e3) {
+                      // JSON parsing failed
+                    }
+                  }
+                }
+              }
+            }
+          }
 
-          if (jsonMatch) {
-            const evaluation = JSON.parse(jsonMatch[0]);
+          if (evaluation) {
 
             // Store all metrics
             setPromptMetrics(evaluation);
@@ -531,9 +620,9 @@ zPlease try again or check your configuration.`);
       </div>
 
       {/* Tab Content */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-hidden">
         {activeTab === 'write' && (
-          <div className="p-4 space-y-4">
+          <div className="h-full overflow-y-auto p-4 space-y-4">
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
@@ -647,7 +736,7 @@ zPlease try again or check your configuration.`);
 
 
         {activeTab === 'analyze' && (
-          <div className="p-4 space-y-4">
+          <div className="h-96 overflow-y-auto p-4 space-y-4">
             <Card className="bg-gray-50 border-gray-200 p-3">
               <h3 className="text-sm font-medium text-gray-700 mb-2">
                 Token Counts
@@ -688,6 +777,22 @@ zPlease try again or check your configuration.`);
 
             <Card className="bg-gray-50 border-gray-200 p-3">
               <h3 className="text-sm font-medium text-gray-700 mb-2">
+                Carbon Emissions
+              </h3>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-600">Total:</span>
+                <div className="text-lg font-bold text-gray-800">
+                  {((lastPromptTokenCount * 0.0001) + (lastResponseTokenCount * 0.0003)).toFixed(4)}
+                </div>
+                <span className="text-xs text-gray-500">g CO₂</span>
+              </div>
+              <div className="text-xs text-gray-500 mt-2">
+                Based on 0.0001g per input token, 0.0003g per output token
+              </div>
+            </Card>
+
+            <Card className="bg-gray-50 border-gray-200 p-3">
+              <h3 className="text-sm font-medium text-gray-700 mb-2">
                 Prompt Quality Score
               </h3>
               <div className="flex items-center space-x-2">
@@ -709,19 +814,22 @@ zPlease try again or check your configuration.`);
                 {promptMetrics ? (
                   Object.entries(promptMetrics)
                     .filter(([key]) => key !== 'final score')
-                    .map(([key, value]) => (
-                      <div key={key} className="flex justify-between">
-                        <span className="capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}:</span>
-                        <span className={`font-medium ${
-                          typeof value === 'number' && value >= 8 ? 'text-emerald-600' :
-                          typeof value === 'number' && value >= 6 ? 'text-yellow-600' :
-                          typeof value === 'number' && value >= 4 ? 'text-orange-600' :
-                          'text-red-600'
-                        }`}>
-                          {typeof value === 'number' ? `${value}/10` : String(value)}
-                        </span>
-                      </div>
-                    ))
+                    .map(([key, value]) => {
+                      const score = typeof value === 'number' ? value : (value as { score: number })?.score || 0;
+                      return (
+                        <div key={key} className="flex justify-between">
+                          <span className="capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}:</span>
+                          <span className={`font-medium ${
+                            score >= 8 ? 'text-emerald-600' :
+                            score >= 6 ? 'text-yellow-600' :
+                            score >= 4 ? 'text-orange-600' :
+                            'text-red-600'
+                          }`}>
+                            {score}/10
+                          </span>
+                        </div>
+                      );
+                    })
                 ) : (
                   <div className="text-gray-600 text-center py-2">
                     Submit a prompt to see detailed metrics
@@ -733,23 +841,33 @@ zPlease try again or check your configuration.`);
             {promptMetrics && (
               <Card className="bg-gray-50 border-gray-200 p-3">
                 <h3 className="text-sm font-medium text-gray-700 mb-2">
-                  Improvement Suggestions
+                  Comments
                 </h3>
-                <div className="text-xs text-gray-600 space-y-1">
+                <div className="text-xs text-gray-600 space-y-3">
                   {Object.entries(promptMetrics)
-                    .filter(([key, value]) => key !== 'final score' && typeof value === 'number' && value < 7)
-                    .map(([key, value]) => (
-                      <div key={key} className="text-orange-600">
-                        • Improve {key.replace(/([A-Z])/g, ' $1').trim().toLowerCase()} (currently {String(value)}/10)
-                      </div>
-                    ))}
-                  {Object.entries(promptMetrics)
-                    .filter(([key, value]) => key !== 'final score' && typeof value === 'number' && value < 7)
-                    .length === 0 && (
-                    <div className="text-emerald-600">
-                      Great job! All metrics are performing well.
-                    </div>
-                  )}
+                    .filter(([key]) => key !== 'final score')
+                    .map(([key, value]) => {
+                      const justification = typeof value === 'object' && value !== null && 'justification' in value 
+                        ? (value as { justification: string }).justification 
+                        : null;
+                      
+                      return (
+                        <div key={key} className="space-y-1">
+                          <div className="font-medium text-gray-800 capitalize">
+                            {key.replace(/([A-Z])/g, ' $1').trim()}:
+                          </div>
+                          {justification ? (
+                            <div className="text-gray-600 pl-2 text-xs">
+                              {justification}
+                            </div>
+                          ) : (
+                            <div className="text-gray-400 pl-2 text-xs italic">
+                              No justification available
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                 </div>
               </Card>
             )}

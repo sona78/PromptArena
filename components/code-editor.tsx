@@ -39,9 +39,13 @@ export function CodeEditor() {
       return;
     }
 
-    // Save current file before execution if there are unsaved changes
-    if (activeFile && hasUnsavedChanges) {
+    // Always force save current file before execution to ensure latest changes are persisted
+    if (activeFile) {
+      console.log('Force saving file before test execution:', activeFile.name);
       await saveFile();
+
+      // Wait a brief moment to ensure the save operation completes
+      await new Promise(resolve => setTimeout(resolve, 100));
     }
 
     // Execute all files in the session

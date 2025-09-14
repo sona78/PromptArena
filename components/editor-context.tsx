@@ -16,6 +16,7 @@ interface ActiveFile {
   path: string;
   content: string;
   language: 'javascript' | 'python' | 'text';
+  lastSaved?: number;
 }
 
 interface EditorContextType {
@@ -106,6 +107,8 @@ export function EditorProvider({ children }: { children: ReactNode }) {
         await saveFile(true); // Skip UI state update for faster transition
       }
 
+      // Add cache busting timestamp to ensure we get the latest version
+      const cacheBuster = `?t=${Date.now()}`;
       const { data, error } = await supabase.storage
         .from('Sessions')
         .download(path);
@@ -144,18 +147,28 @@ export function EditorProvider({ children }: { children: ReactNode }) {
     try {
       if (!skipStateUpdate) setIsSaving(true);
 
+      console.log('Saving file:', activeFile.path, 'Content length:', code.length);
+
+      // Use upload with upsert option instead of update for better reliability
       const { error } = await supabase.storage
         .from('Sessions')
-        .update(activeFile.path, new Blob([code], { type: 'text/plain' }));
+        .upload(activeFile.path, new Blob([code], { type: 'text/plain' }), {
+          cacheControl: '0', // Disable caching
+          upsert: true // Overwrite existing file
+        });
 
       if (error) {
+        console.error('Supabase storage error:', error);
         throw error;
       }
 
-      // Update the active file content
+      console.log('File saved successfully:', activeFile.path);
+
+      // Update the active file content immediately with timestamp for cache busting
       setActiveFile({
         ...activeFile,
-        content: code
+        content: code,
+        lastSaved: Date.now()
       });
 
       setHasUnsavedChanges(false);
@@ -213,6 +226,133 @@ export function EditorProvider({ children }: { children: ReactNode }) {
       throw error;
     }
   };
+
+  // Function to save all analysis data to feedback object in Supabase
+  const saveAnalysisDataToFeedback = async (sessionId: string, analysisData: {
+    promptChainingScore?: number | null;
+    codeEvaluationScore?: number | null;
+    codeAccuracyScore?: number | null;
+    promptQualityScore?: number;
+    promptMetrics?: Record<string, unknown> | null;
+    promptTokenCount?: number;
+    responseTokenCount?: number;
+  }) => {
+    if (!sessionId) return;
+
+    try {
+      // Get current session feedback
+      const { data: session, error: sessionError } = await supabase
+        .from('Sessions')
+        .select('feedback')
+        .eq('session_id', sessionId)
+        .single();
+
+      if (sessionError) {
+        console.error('Error fetching session feedback:', sessionError);
+        return;
+      }
+
+      // Extract persistent fields from current feedback (avoiding duplication)
+      const currentFeedback = session?.feedback || {};
+      let persistentData: Record<string, unknown> = {};
+
+      // Extract current persistent data
+      if (currentFeedback.promptChainingScore !== null && currentFeedback.promptChainingScore !== undefined) {
+        persistentData.promptChainingScore = currentFeedback.promptChainingScore;
+      }
+      if (currentFeedback.codeEvaluationScore !== null && currentFeedback.codeEvaluationScore !== undefined) {
+        persistentData.codeEvaluationScore = currentFeedback.codeEvaluationScore;
+      }
+      if (currentFeedback.codeAccuracyScore !== null && currentFeedback.codeAccuracyScore !== undefined) {
+        persistentData.codeAccuracyScore = currentFeedback.codeAccuracyScore;
+      }
+      if (currentFeedback.promptTokenCount !== null && currentFeedback.promptTokenCount !== undefined) {
+        persistentData.promptTokenCount = currentFeedback.promptTokenCount;
+      }
+      if (currentFeedback.responseTokenCount !== null && currentFeedback.responseTokenCount !== undefined) {
+        persistentData.responseTokenCount = currentFeedback.responseTokenCount;
+      }
+      if (currentFeedback.metrics) {
+        persistentData.metrics = currentFeedback.metrics;
+      }
+      if (currentFeedback.qualityScore !== null && currentFeedback.qualityScore !== undefined) {
+        persistentData.qualityScore = currentFeedback.qualityScore;
+      }
+
+      // Update with new analysis data (only if they're not null/undefined)
+      if (analysisData.promptChainingScore !== null && analysisData.promptChainingScore !== undefined) {
+        persistentData.promptChainingScore = analysisData.promptChainingScore;
+      }
+      if (analysisData.codeEvaluationScore !== null && analysisData.codeEvaluationScore !== undefined) {
+        persistentData.codeEvaluationScore = analysisData.codeEvaluationScore;
+      }
+      if (analysisData.codeAccuracyScore !== null && analysisData.codeAccuracyScore !== undefined) {
+        persistentData.codeAccuracyScore = analysisData.codeAccuracyScore;
+      }
+      if (analysisData.promptQualityScore !== null && analysisData.promptQualityScore !== undefined) {
+        persistentData.qualityScore = analysisData.promptQualityScore;
+      }
+      if (analysisData.promptMetrics !== null && analysisData.promptMetrics !== undefined) {
+        persistentData.metrics = analysisData.promptMetrics;
+      }
+      if (analysisData.promptTokenCount !== null && analysisData.promptTokenCount !== undefined && analysisData.promptTokenCount > 0) {
+        persistentData.promptTokenCount = analysisData.promptTokenCount;
+      }
+      if (analysisData.responseTokenCount !== null && analysisData.responseTokenCount !== undefined && analysisData.responseTokenCount > 0) {
+        persistentData.responseTokenCount = analysisData.responseTokenCount;
+      }
+
+      // Create clean feedback object without duplication
+      const updatedFeedback = {
+        ...persistentData,
+        timestamp: new Date().toISOString(),
+        type: 'prompt_analysis'
+      };
+
+      // Calculate weighted overall score
+      const calculateOverallScore = (feedback: any): number => {
+        const promptQuality = feedback.qualityScore || 0;
+        const promptChaining = feedback.promptChainingScore || 0;
+        const codeEvaluation = feedback.codeEvaluationScore || 0;
+        const codeAccuracy = feedback.codeAccuracyScore || 0;
+
+        // Weights: 10% prompt quality, 15% prompt chaining, 30% code evaluation, 45% code accuracy
+        // Note: prompt quality is on scale 0-10, others are 0-1, so normalize prompt quality
+        const normalizedPromptQuality = promptQuality / 10;
+
+        const weightedScore = (
+          (0.10 * normalizedPromptQuality) +
+          (0.15 * promptChaining) +
+          (0.30 * codeEvaluation) +
+          (0.45 * codeAccuracy)
+        );
+
+        // Return score as percentage (0-100)
+        return Math.round(weightedScore * 100);
+      };
+
+      const overallScore = calculateOverallScore(updatedFeedback);
+
+      // Update session with new feedback and calculated score
+      const { error: updateError } = await supabase
+        .from('Sessions')
+        .update({
+          feedback: updatedFeedback,
+          score: overallScore
+        })
+        .eq('session_id', sessionId);
+
+      if (updateError) {
+        console.error('Error updating scores in feedback:', updateError);
+        return;
+      }
+
+      console.log('Successfully saved analysis data to feedback object in Supabase:', analysisData);
+    } catch (error) {
+      console.error('Error saving scores to feedback:', error);
+    }
+  };
+
 
   const executeMultiFile = async (sessionId: string, entryPoint?: string) => {
     setIsExecuting(true);
@@ -469,7 +609,18 @@ export function EditorProvider({ children }: { children: ReactNode }) {
           newScores.codeAccuracyScore = accuracyEvaluationResult.evaluation.AccuracyScore;
         }
 
-        // Note: Persistent scores are automatically saved via saveFeedbackToDatabase in prompt-panel.tsx
+        // Save all analysis data to Supabase feedback object
+        const analysisData = {
+          ...newScores,
+          promptQualityScore: promptQualityScore,
+          promptMetrics: promptMetrics,
+          // Add token counts if available - these would typically come from the prompt evaluation
+          promptTokenCount: promptEvaluationResult?.evaluation?.TokenCounts?.PromptTokens || undefined,
+          responseTokenCount: promptEvaluationResult?.evaluation?.TokenCounts?.ResponseTokens || undefined
+        };
+
+        console.log('Saving analysis data to feedback object:', analysisData);
+        await saveAnalysisDataToFeedback(sessionId, analysisData);
       } catch (evaluationError) {
         console.error('Error running evaluations:', evaluationError);
       }
@@ -494,7 +645,7 @@ export function EditorProvider({ children }: { children: ReactNode }) {
         setIsSaving(false);
       }
     }
-  }, 2000); // Auto-save after 2 seconds of inactivity
+  }, 500); // Auto-save after 500ms of inactivity
 
   // Track changes and trigger auto-save
   useEffect(() => {
