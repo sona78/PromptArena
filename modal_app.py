@@ -123,8 +123,19 @@ def _execute_python(code: str) -> Dict[str, Any]:
                 "dir": dir,
                 "help": help,
                 "__import__": __import__,
-                "__name__": __name__,
-            }
+                "input": lambda prompt="": "", # Mock input that returns empty string
+                "ValueError": ValueError,
+                "TypeError": TypeError,
+                "KeyError": KeyError,
+                "IndexError": IndexError,
+                "AttributeError": AttributeError,
+                "NameError": NameError,
+                "ZeroDivisionError": ZeroDivisionError,
+                "FileNotFoundError": FileNotFoundError,
+                "Exception": Exception,
+                "BaseException": BaseException,
+            },
+            "__name__": "__main__"
         }
         
         # Allow common safe imports
