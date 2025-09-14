@@ -57,7 +57,7 @@ export function FileSystemSidebar({ sessionId }: FileSystemSidebarProps) {
       }
 
       // Build file tree structure
-      const fileTree = buildFileTree(data || []);
+      const fileTree = buildFileTree((data || []) as any[]);
 
       // Only add test file to the file tree if it exists in storage and is not already in the list
       if (testFile && !fileTree.some(f => f.name === testFile)) {
@@ -80,6 +80,31 @@ export function FileSystemSidebar({ sessionId }: FileSystemSidebarProps) {
       }
 
       setFiles(fileTree);
+
+      // Auto-open default file if no file is currently active and files exist
+      if (!activeFile && fileTree.length > 0) {
+        // Look for main.py or main.html first
+        const defaultFiles = ['main.py', 'main.html'];
+        let fileToOpen = null;
+
+        for (const defaultFileName of defaultFiles) {
+          const foundFile = fileTree.find(file => file.name === defaultFileName && file.type === 'file');
+          if (foundFile) {
+            fileToOpen = foundFile;
+            break;
+          }
+        }
+
+        // If no main.py or main.html found, open the first non-test file
+        if (!fileToOpen) {
+          fileToOpen = fileTree.find(file => file.type === 'file' && file.name !== testFile);
+        }
+
+        // Open the selected file
+        if (fileToOpen) {
+          await openFile(fileToOpen.path, fileToOpen.name);
+        }
+      }
     } catch (err) {
       console.error('Error fetching files:', err);
       setError('Failed to load files');
@@ -95,12 +120,12 @@ export function FileSystemSidebar({ sessionId }: FileSystemSidebarProps) {
     }
   }, [testFile, sessionId]); // fetchFiles would cause infinite re-renders if added
 
-  const buildFileTree = (items: Array<Record<string, unknown>>): FileItem[] => {
+  const buildFileTree = (items: Array<any>): FileItem[] => {
     const tree: FileItem[] = [];
 
     items.forEach(item => {
       const fileItem: FileItem = {
-        name: item.name,
+        name: item.name as string,
         path: `${sessionId}/${item.name}`,
         type: item.metadata ? 'file' : 'folder',
         isExpanded: false
@@ -129,7 +154,7 @@ export function FileSystemSidebar({ sessionId }: FileSystemSidebarProps) {
             });
 
           if (!error && data) {
-            folder.children = buildFileTree(data);
+            folder.children = buildFileTree(data as any[]);
           }
         } catch (err) {
           console.error('Error fetching folder contents:', err);
