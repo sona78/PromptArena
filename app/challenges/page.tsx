@@ -228,19 +228,19 @@ export default function DashboardPage() {
     {
       title: "FRONTEND",
       icon: Monitor,
-      taskTypes: [1, 3], // Text Processing and Creative Writing for frontend
+      taskTypes: [0], // Frontend tasks
       searchPlaceholder: "Search frontend challenges..."
     },
     {
       title: "BACKEND", 
       icon: Server,
-      taskTypes: [0], // Code Generation for backend
+      taskTypes: [1], // Backend tasks
       searchPlaceholder: "Search backend challenges..."
     },
     {
       title: "MACHINE LEARNING",
       icon: Brain,
-      taskTypes: [2], // Problem Solving for ML
+      taskTypes: [2], // ML tasks
       searchPlaceholder: "Search ML challenges..."
     }
   ];

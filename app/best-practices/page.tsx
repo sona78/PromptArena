@@ -51,7 +51,7 @@ export default function BestPracticesPage() {
   const [selectedCategory, setSelectedCategory] = useState("All Categories");
 
   const models = ["All Models", "Claude-3.5-Sonnet", "GPT-4", "GPT-3.5-Turbo", "Gemini-Pro"];
-  const categories = ["All Categories", "Code Generation", "Text Processing", "Problem Solving", "Creative Writing"];
+  const categories = ["All Categories", "Frontend", "Backend", "ML"];
 
   // Mock data - in production this would come from your ML backend
   const mockPractices: BestPractice[] = [
@@ -59,7 +59,7 @@ export default function BestPracticesPage() {
       id: "1",
       title: "Step-by-step Reasoning for Complex Problems",
       description: "Breaking down complex problems into smaller, sequential steps dramatically improves accuracy across all models.",
-      category: "Problem Solving",
+      category: "ML",
       model: "Claude-3.5-Sonnet",
       effectiveness_score: 94.2,
       sample_count: 847,
@@ -77,7 +77,7 @@ export default function BestPracticesPage() {
       id: "2", 
       title: "Context-Rich Code Generation",
       description: "Providing comprehensive context about the codebase, requirements, and constraints leads to more maintainable code.",
-      category: "Code Generation",
+      category: "Backend",
       model: "GPT-4",
       effectiveness_score: 91.8,
       sample_count: 1203,
@@ -95,7 +95,7 @@ export default function BestPracticesPage() {
       id: "3",
       title: "Persona-Driven Creative Writing",
       description: "Establishing a clear persona or voice before creative tasks results in more consistent and engaging content.",
-      category: "Creative Writing", 
+      category: "Frontend", 
       model: "GPT-3.5-Turbo",
       effectiveness_score: 88.5,
       sample_count: 692,
@@ -113,7 +113,7 @@ export default function BestPracticesPage() {
       id: "4",
       title: "Multi-Example Pattern Recognition",
       description: "Providing 3-5 diverse examples helps models understand patterns better than single examples.",
-      category: "Text Processing",
+      category: "ML",
       model: "Gemini-Pro", 
       effectiveness_score: 87.3,
       sample_count: 456,
