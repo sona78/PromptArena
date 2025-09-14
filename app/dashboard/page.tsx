@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Target, Users, Trophy, Settings, BarChart3 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { AuthGuard } from "@/components/auth-guard";
-import { LogoutButton } from "@/components/logout-button";
+import { JapandiLayout } from "@/components/japandi-layout";
 import { supabase } from "@/lib/supabase";
 
 interface Task {
@@ -113,121 +113,56 @@ export default function DashboardPage() {
 
   return (
     <AuthGuard>
-    <div className="min-h-screen bg-gray-950 text-gray-100 flex flex-col">
-      {/* Navigation Bar */}
-      <nav className="bg-gray-900 border-b border-gray-800 px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-6">
-            <div className="flex items-center space-x-2">
-              <Trophy className="w-6 h-6 text-blue-400" />
-              <span className="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-                PromptArena
-              </span>
-              <Badge variant="outline" className="text-xs border-gray-600 text-gray-400">
-                Beta
-              </Badge>
-            </div>
-
-            <div className="flex items-center space-x-1">
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="text-gray-300 hover:text-white hover:bg-gray-800"
-                onClick={() => router.push('/leaderboard')}
-              >
-                <BarChart3 className="w-4 h-4 mr-2" />
-                Leaderboard
-              </Button>
-              <Button variant="ghost" size="sm" className="text-gray-300 hover:text-white hover:bg-gray-800">
-                <Users className="w-4 h-4 mr-2" />
-                Battles
-              </Button>
-            </div>
+      <JapandiLayout
+        title="Challenges"
+        subtitle="Explore thoughtfully crafted prompting challenges. Each task is designed to enhance your skills through mindful practice and focused attention."
+      >
+        <div className="space-y-8">
+          <div className="flex items-center space-x-3 text-sm text-stone-500">
+            <div className="w-2 h-2 rounded-full bg-stone-400"></div>
+            <span className="font-light tracking-wide">{tasks.length} challenges available</span>
           </div>
 
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2 text-sm text-gray-400">
-              <span>Rank:</span>
-              <Badge className="bg-blue-900 text-blue-200 border-blue-700">
-                #1,247
-              </Badge>
+          {loading ? (
+            <div className="flex items-center justify-center min-h-96">
+              <div className="text-stone-500 font-light text-xl tracking-wide">Loading challenges...</div>
             </div>
-
-            <Button variant="ghost" size="sm" className="text-gray-300 hover:text-white hover:bg-gray-800">
-              <Settings className="w-4 h-4" />
-            </Button>
-
-            <LogoutButton />
-          </div>
-        </div>
-      </nav>
-
-      {/* Dashboard Header */}
-      <div className="bg-gray-900 border-b border-gray-800 px-6 py-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2">
-              <Trophy className="w-6 h-6 text-blue-400" />
-              <h1 className="text-2xl font-bold text-white">
-                Challenge Dashboard
-              </h1>
-            </div>
-          </div>
-
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2 text-sm text-gray-400">
-              <Users className="w-4 h-4" />
-              <span>{tasks.length} tasks available</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-3 text-sm text-gray-400">
-          <p>Choose a task to test your prompt engineering skills.</p>
-        </div>
-      </div>
-
-      {/* Main Content - Task Cards */}
-      <div className="flex-1 w-full p-6">
-        {loading ? (
-          <div className="flex items-center justify-center min-h-64">
-            <div className="text-gray-400">Loading tasks...</div>
-          </div>
-        ) : (
-          <div className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
-            {tasks.map((task) => (
-              <Card key={task.task_id} className="bg-gray-900 border-gray-800 hover:border-gray-700 transition-colors">
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <Target className="w-5 h-5 text-blue-400" />
-                      <Badge className="bg-emerald-900 text-emerald-200 border-emerald-700">
-                        Active
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+              {tasks.map((task) => (
+                <Card key={task.task_id} className="group bg-white border-0 shadow-sm hover:shadow-xl transition-all duration-700 rounded-3xl overflow-hidden">
+                  <CardHeader className="p-10 pb-8">
+                    <div className="flex items-start justify-between mb-8">
+                      <div className="w-14 h-14 rounded-full bg-stone-100 flex items-center justify-center group-hover:bg-stone-200 transition-colors duration-500">
+                        <Target className="w-6 h-6 text-stone-600" />
+                      </div>
+                      <Badge variant="outline" className="border-stone-200 text-stone-500 text-xs font-light bg-stone-50 px-3 py-1">
+                        Type {task.type}
                       </Badge>
                     </div>
-                    <Badge variant="outline" className="border-gray-600 text-gray-400 text-xs">
-                      Type {task.type}
-                    </Badge>
-                  </div>
-                  <CardTitle className="text-white text-lg">{task.name}</CardTitle>
-                </CardHeader>
+                    <CardTitle className="text-stone-800 text-2xl font-light leading-relaxed tracking-wide">
+                      {task.name}
+                    </CardTitle>
+                  </CardHeader>
 
-                <CardContent className="space-y-4">
-                  <Button
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-                    size="sm"
-                    onClick={() => handleStartTask(task.task_id)}
-                    disabled={startingTask === task.task_id}
-                  >
-                    {startingTask === task.task_id ? "Starting..." : "Start Task"}
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
+                  <CardContent className="px-10 pb-10">
+                    <div className="space-y-8">
+                      <div className="h-px bg-gradient-to-r from-transparent via-stone-200 to-transparent"></div>
+                      <Button
+                        className="w-full bg-stone-800 hover:bg-stone-900 text-white border-0 rounded-2xl py-7 font-light tracking-wide text-lg transition-all duration-500 hover:shadow-lg hover:-translate-y-0.5"
+                        onClick={() => handleStartTask(task.task_id)}
+                        disabled={startingTask === task.task_id}
+                      >
+                        {startingTask === task.task_id ? "Preparing..." : "Begin Challenge"}
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
+      </JapandiLayout>
     </AuthGuard>
   );
 }

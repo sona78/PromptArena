@@ -7,44 +7,44 @@ import Link from "next/link";
 
 export function Navigation() {
   return (
-    <nav className="bg-gray-900 border-b border-gray-800 px-6 py-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-6">
-          <Link href="/dashboard" className="flex items-center space-x-2 hover:opacity-80 transition-opacity cursor-pointer">
-            <Trophy className="w-6 h-6 text-blue-400" />
-            <span className="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+    <nav className="bg-white/80 backdrop-blur-sm border-b border-stone-200/50 px-8 py-6">
+      <div className="max-w-7xl mx-auto flex items-center justify-between">
+        <div className="flex items-center space-x-12">
+          <Link href="/dashboard" className="flex items-center space-x-3 group">
+            <div className="w-8 h-8 rounded-full bg-stone-800 flex items-center justify-center group-hover:bg-stone-700 transition-colors duration-300">
+              <Trophy className="w-4 h-4 text-stone-50" />
+            </div>
+            <span className="text-2xl font-extralight tracking-wide text-stone-800">
               PromptArena
             </span>
-            <Badge variant="outline" className="text-xs border-gray-600 text-gray-400">
+            <Badge variant="outline" className="text-xs border-stone-300 text-stone-500 bg-stone-50 font-light">
               Beta
             </Badge>
           </Link>
           
-          <div className="flex items-center space-x-1">
+          <div className="hidden md:flex items-center space-x-8">
             <Link href="/leaderboard">
-              <Button variant="ghost" size="sm" className="text-gray-300 hover:text-white hover:bg-gray-800">
-                <BarChart3 className="w-4 h-4 mr-2" />
+              <button className="text-stone-600 hover:text-stone-800 transition-colors duration-300 text-sm font-light tracking-wide">
                 Leaderboard
-              </Button>
+              </button>
             </Link>
-            <Button variant="ghost" size="sm" className="text-gray-300 hover:text-white hover:bg-gray-800">
-              <Users className="w-4 h-4 mr-2" />
+            <button className="text-stone-600 hover:text-stone-800 transition-colors duration-300 text-sm font-light tracking-wide">
               Battles
-            </Button>
+            </button>
           </div>
         </div>
         
-        <div className="flex items-center space-x-4">
-          <div className="flex items-center space-x-2 text-sm text-gray-400">
-            <span>Rank:</span>
-            <Badge className="bg-blue-900 text-blue-200 border-blue-700">
+        <div className="flex items-center space-x-6">
+          <div className="hidden sm:flex items-center space-x-3 text-sm text-stone-500">
+            <span className="font-light">Rank</span>
+            <Badge className="bg-stone-100 text-stone-700 border-stone-200 font-light">
               #1,247
             </Badge>
           </div>
           
-          <Button variant="ghost" size="sm" className="text-gray-300 hover:text-white hover:bg-gray-800">
+          <button className="p-2 text-stone-500 hover:text-stone-700 transition-colors duration-300">
             <Settings className="w-4 h-4" />
-          </Button>
+          </button>
         </div>
       </div>
     </nav>

@@ -15,7 +15,7 @@ export default function EditorPage() {
 
   return (
     <AuthGuard>
-      <div className="min-h-screen bg-gray-950 text-gray-100 flex flex-col">
+      <div className="min-h-screen bg-stone-50 text-stone-800 flex flex-col font-light">
         {/* Navigation Bar */}
         <Navigation />
 

@@ -47,36 +47,37 @@ export function LoginForm({
   };
 
   return (
-    <div className={cn("flex flex-col gap-6", className)} {...props}>
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-2xl">Login</CardTitle>
-          <CardDescription>
-            Enter your email below to login to your account
+    <div className={cn("flex flex-col gap-8", className)} {...props}>
+      <Card className="bg-white border-0 shadow-lg rounded-3xl overflow-hidden">
+        <CardHeader className="p-10 pb-8">
+          <CardTitle className="text-3xl font-extralight text-stone-800 tracking-wide">Sign In</CardTitle>
+          <CardDescription className="text-stone-600 font-light text-lg leading-relaxed mt-4">
+            Enter your credentials to continue your mindful journey
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-10 pt-0">
           <form onSubmit={handleLogin}>
-            <div className="flex flex-col gap-6">
-              <div className="grid gap-2">
-                <Label htmlFor="email">Email</Label>
+            <div className="flex flex-col gap-8">
+              <div className="space-y-3">
+                <Label htmlFor="email" className="text-stone-700 font-light tracking-wide">Email</Label>
                 <Input
                   id="email"
                   type="email"
-                  placeholder="m@example.com"
+                  placeholder="your@email.com"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  className="border-stone-200 bg-stone-50/50 rounded-xl py-6 px-4 text-stone-800 font-light focus:border-stone-400 focus:ring-stone-200 transition-colors duration-300"
                 />
               </div>
-              <div className="grid gap-2">
+              <div className="space-y-3">
                 <div className="flex items-center">
-                  <Label htmlFor="password">Password</Label>
+                  <Label htmlFor="password" className="text-stone-700 font-light tracking-wide">Password</Label>
                   <Link
                     href="/auth/forgot-password"
-                    className="ml-auto inline-block text-sm underline-offset-4 hover:underline"
+                    className="ml-auto text-sm text-stone-500 hover:text-stone-700 font-light tracking-wide transition-colors duration-300"
                   >
-                    Forgot your password?
+                    Forgot password?
                   </Link>
                 </div>
                 <Input
@@ -85,20 +86,25 @@ export function LoginForm({
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  className="border-stone-200 bg-stone-50/50 rounded-xl py-6 px-4 text-stone-800 font-light focus:border-stone-400 focus:ring-stone-200 transition-colors duration-300"
                 />
               </div>
-              {error && <p className="text-sm text-red-500">{error}</p>}
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? "Logging in..." : "Login"}
+              {error && <p className="text-sm text-red-600 font-light">{error}</p>}
+              <Button 
+                type="submit" 
+                className="w-full bg-stone-800 hover:bg-stone-900 text-white border-0 rounded-xl py-6 font-light tracking-wide text-lg transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5" 
+                disabled={isLoading}
+              >
+                {isLoading ? "Signing in..." : "Sign In"}
               </Button>
             </div>
-            <div className="mt-4 text-center text-sm">
-              Don&apos;t have an account?{" "}
+            <div className="mt-8 text-center">
+              <span className="text-stone-600 font-light">Don't have an account? </span>
               <Link
                 href="/auth/sign-up"
-                className="underline underline-offset-4"
+                className="text-stone-800 hover:text-stone-900 font-light tracking-wide transition-colors duration-300"
               >
-                Sign up
+                Create one
               </Link>
             </div>
           </form>
