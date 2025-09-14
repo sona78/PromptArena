@@ -2,8 +2,16 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Folder, File, ChevronRight, ChevronDown, Loader2 } from 'lucide-react';
+import { Folder, File, ChevronRight, ChevronDown, Loader2, Plus, Trash2, MoreHorizontal } from 'lucide-react';
 import { useEditor } from './editor-context';
+import { Button } from './ui/button';
+import { Input } from './ui/input';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from './ui/dropdown-menu';
 
 interface FileItem {
   name: string;
@@ -21,7 +29,10 @@ export function FileSystemSidebar({ sessionId }: FileSystemSidebarProps) {
   const [files, setFiles] = useState<FileItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { openFile, activeFile } = useEditor();
+  const [creatingFile, setCreatingFile] = useState(false);
+  const [newFileName, setNewFileName] = useState('');
+  const [entryFile, setEntryFile] = useState<string>('');
+  const { openFile, activeFile, closeFile } = useEditor();
 
   useEffect(() => {
     if (sessionId) {
@@ -47,6 +58,12 @@ export function FileSystemSidebar({ sessionId }: FileSystemSidebarProps) {
       // Build file tree structure
       const fileTree = buildFileTree(data || []);
       setFiles(fileTree);
+
+      // Detect entry file (main.py or first .py file, or any single file)
+      const pythonFiles = fileTree.filter(f => f.type === 'file' && f.name.endsWith('.py'));
+      const mainPy = pythonFiles.find(f => f.name === 'main.py');
+      const entryFileName = mainPy ? 'main.py' : (pythonFiles.length === 1 ? pythonFiles[0].name : fileTree.find(f => f.type === 'file')?.name || '');
+      setEntryFile(entryFileName);
     } catch (err) {
       console.error('Error fetching files:', err);
       setError('Failed to load files');
@@ -106,37 +123,141 @@ export function FileSystemSidebar({ sessionId }: FileSystemSidebarProps) {
     }
   };
 
+  const createFile = async (fileName: string) => {
+    if (!fileName.trim()) return;
+
+    try {
+      const filePath = `${sessionId}/${fileName.trim()}`;
+      const { error } = await supabase.storage
+        .from('Sessions')
+        .upload(filePath, new Blob([''], { type: 'text/plain' }));
+
+      if (error) {
+        throw error;
+      }
+
+      // Refresh file list
+      await fetchFiles();
+      setCreatingFile(false);
+      setNewFileName('');
+
+      // Automatically open the new file
+      await openFile(filePath, fileName.trim());
+    } catch (error) {
+      console.error('Error creating file:', error);
+      setError('Failed to create file');
+    }
+  };
+
+  const deleteFile = async (fileName: string) => {
+    if (fileName === entryFile) {
+      setError('Cannot delete entry file');
+      return;
+    }
+
+    try {
+      const filePath = `${sessionId}/${fileName}`;
+      const { error } = await supabase.storage
+        .from('Sessions')
+        .remove([filePath]);
+
+      if (error) {
+        throw error;
+      }
+
+      // Close file if it's currently active
+      if (activeFile && activeFile.name === fileName) {
+        closeFile();
+      }
+
+      // Refresh file list
+      await fetchFiles();
+    } catch (error) {
+      console.error('Error deleting file:', error);
+      setError('Failed to delete file');
+    }
+  };
+
+  const handleCreateFile = () => {
+    setCreatingFile(true);
+    setNewFileName('');
+  };
+
+  const handleCreateFileSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    createFile(newFileName);
+  };
+
+  const handleCreateFileCancel = () => {
+    setCreatingFile(false);
+    setNewFileName('');
+  };
+
   const renderFileItem = (item: FileItem, index: number, level = 0) => {
     const paddingLeft = level * 16 + 8;
     const isActive = activeFile?.path === item.path;
+    const isEntryFile = item.name === entryFile;
 
     return (
       <div key={`${item.path}-${index}`}>
         <div
-          className={`flex items-center py-1 px-2 hover:bg-gray-800 cursor-pointer text-sm ${
+          className={`flex items-center py-1 px-2 hover:bg-gray-800 cursor-pointer text-sm group ${
             isActive ? 'bg-blue-900/50 border-r-2 border-blue-500' : ''
           }`}
           style={{ paddingLeft: `${paddingLeft}px` }}
-          onClick={() => item.type === 'folder' ? toggleFolder(index) : handleFileClick(item)}
         >
-          {item.type === 'folder' ? (
-            <>
-              {item.isExpanded ? (
-                <ChevronDown className="w-4 h-4 mr-1 text-gray-400" />
-              ) : (
-                <ChevronRight className="w-4 h-4 mr-1 text-gray-400" />
-              )}
-              <Folder className="w-4 h-4 mr-2 text-blue-400" />
-            </>
-          ) : (
-            <>
-              <div className="w-4 h-4 mr-1" />
-              <File className="w-4 h-4 mr-2 text-gray-400" />
-            </>
+          <div
+            className="flex items-center flex-1 min-w-0"
+            onClick={() => item.type === 'folder' ? toggleFolder(index) : handleFileClick(item)}
+          >
+            {item.type === 'folder' ? (
+              <>
+                {item.isExpanded ? (
+                  <ChevronDown className="w-4 h-4 mr-1 text-gray-400" />
+                ) : (
+                  <ChevronRight className="w-4 h-4 mr-1 text-gray-400" />
+                )}
+                <Folder className="w-4 h-4 mr-2 text-blue-400" />
+              </>
+            ) : (
+              <>
+                <div className="w-4 h-4 mr-1" />
+                <File className={`w-4 h-4 mr-2 ${isEntryFile ? 'text-green-400' : 'text-gray-400'}`} />
+              </>
+            )}
+            <span className={`truncate ${isActive ? 'text-blue-200 font-medium' : 'text-gray-200'}`}>
+              {item.name}
+              {isEntryFile && <span className="text-xs text-green-400 ml-1">(entry)</span>}
+            </span>
+          </div>
+
+          {item.type === 'file' && !isEntryFile && (
+            <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 w-6 p-0 text-gray-400 hover:text-white"
+                  >
+                    <MoreHorizontal className="w-3 h-3" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteFile(item.name);
+                    }}
+                    className="text-red-400 focus:text-red-300"
+                  >
+                    <Trash2 className="w-3 h-3 mr-2" />
+                    Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           )}
-          <span className={`truncate ${isActive ? 'text-blue-200 font-medium' : 'text-gray-200'}`}>
-            {item.name}
-          </span>
         </div>
 
         {item.type === 'folder' && item.isExpanded && item.children && (
@@ -182,19 +303,54 @@ export function FileSystemSidebar({ sessionId }: FileSystemSidebarProps) {
         ) : (
           <div className="py-2">
             {files.map((file, index) => renderFileItem(file, index))}
+
+            {/* File creation input */}
+            {creatingFile && (
+              <div className="px-2 py-1">
+                <form onSubmit={handleCreateFileSubmit} className="flex items-center space-x-1">
+                  <div className="w-4 h-4 mr-1" />
+                  <File className="w-4 h-4 mr-2 text-gray-400" />
+                  <Input
+                    type="text"
+                    value={newFileName}
+                    onChange={(e) => setNewFileName(e.target.value)}
+                    placeholder="filename.py"
+                    className="h-6 text-xs bg-gray-800 border-gray-700 text-gray-200 flex-1"
+                    autoFocus
+                    onBlur={handleCreateFileCancel}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Escape') {
+                        handleCreateFileCancel();
+                      }
+                    }}
+                  />
+                </form>
+              </div>
+            )}
           </div>
         )}
       </div>
 
       {/* Actions */}
-      <div className="p-2 border-t border-gray-800">
-        <button
+      <div className="p-2 border-t border-gray-800 space-y-2">
+        <Button
+          onClick={handleCreateFile}
+          className="w-full text-xs bg-blue-600 hover:bg-blue-700 text-white"
+          size="sm"
+          disabled={loading || creatingFile}
+        >
+          <Plus className="w-3 h-3 mr-1" />
+          New File
+        </Button>
+        <Button
           onClick={fetchFiles}
-          className="w-full px-3 py-1 text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 rounded"
+          variant="outline"
+          className="w-full text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 border-gray-700"
+          size="sm"
           disabled={loading}
         >
           Refresh
-        </button>
+        </Button>
       </div>
     </div>
   );

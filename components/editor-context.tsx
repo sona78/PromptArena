@@ -26,6 +26,7 @@ interface EditorContextType {
   activeFile: ActiveFile | null;
   setActiveFile: (file: ActiveFile | null) => void;
   openFile: (path: string, name: string) => Promise<void>;
+  closeFile: () => void;
   saveFile: () => Promise<void>;
   isLoading: boolean;
   setIsLoading: (loading: boolean) => void;
@@ -170,6 +171,12 @@ export function EditorProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const closeFile = () => {
+    setActiveFile(null);
+    setCode('');
+    setHasUnsavedChanges(false);
+  };
+
   // Debounced auto-save function
   const debouncedAutoSave = useDebounce(async () => {
     if (activeFile && hasUnsavedChanges && !isSaving) {
@@ -209,6 +216,7 @@ export function EditorProvider({ children }: { children: ReactNode }) {
       activeFile,
       setActiveFile,
       openFile,
+      closeFile,
       saveFile,
       isLoading,
       setIsLoading,
