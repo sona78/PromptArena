@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Target, ChevronLeft, ChevronRight, Search, Monitor, Server, Brain } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Navigation } from "@/components/navigation";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/client";
 
 interface Task {
   task_id: string;
@@ -41,6 +41,7 @@ export default function DashboardPage() {
   // Recursive function to search for task ID folder in templates bucket
   const findTaskTemplateFolder = async (taskId: string, currentPath: string = ''): Promise<string | null> => {
     try {
+      const supabase = createClient();
       const { data: items, error } = await supabase.storage
         .from('Templates')
         .list(currentPath, {
@@ -96,6 +97,7 @@ export default function DashboardPage() {
 
     const collectFiles = async (currentPath: string): Promise<void> => {
       try {
+        const supabase = createClient();
         const { data: items, error } = await supabase.storage
           .from('Templates')
           .list(currentPath, {
@@ -174,6 +176,7 @@ export default function DashboardPage() {
           console.log(`Copying file: ${file.path}`);
 
           // Download the file from templates bucket
+          const supabase = createClient();
           const { data: fileData, error: downloadError } = await supabase.storage
             .from('Templates')
             .download(file.path);
@@ -254,6 +257,7 @@ export default function DashboardPage() {
 
   const fetchTasks = async () => {
     try {
+      const supabase = createClient();
       const { data, error } = await supabase
         .from('Tasks')
         .select('*')
@@ -290,6 +294,7 @@ export default function DashboardPage() {
 
     try {
       // Get current user
+      const supabase = createClient();
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       if (userError || !user) {
         console.error('User not authenticated:', userError);

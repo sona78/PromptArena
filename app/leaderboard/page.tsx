@@ -1,6 +1,5 @@
 "use client";
 
-import { AuthGuard } from "@/components/auth-guard";
 import { Navigation } from "@/components/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -128,15 +127,14 @@ export default function LeaderboardPage() {
   };
 
   return (
-    <AuthGuard>
-      <div className="min-h-screen bg-white">
-        <Navigation />
+    <div className="min-h-screen bg-white">
+      <Navigation />
 
-        <div className="max-w-7xl mx-auto px-6 py-8">
-          <div className="mb-8">
-            <h1 className="text-section-header-lg text-[#28282D] mb-2">LEADERBOARD</h1>
-            <p className="text-serif-lg text-[#79797C]">Top performing prompt engineers in our community.</p>
-          </div>
+      <div className="max-w-7xl mx-auto px-6 py-8">
+        <div className="mb-8">
+          <h1 className="text-section-header-lg text-[#28282D] mb-2">LEADERBOARD</h1>
+          <p className="text-serif-lg text-[#79797C]">Top performing prompt engineers in our community.</p>
+        </div>
 
           {/* Filter Dropdowns */}
           <div className="flex flex-wrap gap-4 justify-center mb-6">
@@ -287,6 +285,5 @@ export default function LeaderboardPage() {
           </Card>
         </div>
       </div>
-    </AuthGuard>
   );
 }

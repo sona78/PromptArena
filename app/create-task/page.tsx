@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/toast";
-import { AuthGuard } from "@/components/auth-guard";
 import { Navigation } from "@/components/navigation";
 import { FileUpload } from "@/components/ui/file-upload";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -102,9 +101,8 @@ export default function CreateTaskPage() {
   };
 
   return (
-    <AuthGuard>
-      <div className="min-h-screen bg-white">
-        <Navigation />
+    <div className="min-h-screen bg-white">
+      <Navigation />
 
         <div className="max-w-4xl mx-auto px-6 py-8">
           <div className="mb-8">
@@ -252,6 +250,5 @@ export default function CreateTaskPage() {
           </form>
         </div>
       </div>
-    </AuthGuard>
   );
 }

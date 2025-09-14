@@ -51,9 +51,6 @@ export async function updateSession(request: NextRequest) {
     console.log('Auth error in middleware:', error);
   }
 
-  // Add debug logging
-  console.log(`Middleware: ${request.nextUrl.pathname}, User: ${user?.id || 'none'}, Protected: ${!request.nextUrl.pathname.startsWith('/auth') && !request.nextUrl.pathname.startsWith('/api') && request.nextUrl.pathname !== '/'}, HasEnvVars: ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`);
-
   // Only redirect to login if:
   // 1. User is not authenticated
   // 2. Path is not already auth-related

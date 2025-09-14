@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { AuthGuard } from "@/components/auth-guard";
 import { Navigation } from "@/components/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -182,9 +181,8 @@ export default function BestPracticesPage() {
   };
 
   return (
-    <AuthGuard>
-      <div className="min-h-screen bg-white">
-        <Navigation />
+    <div className="min-h-screen bg-white">
+      <Navigation />
 
         <div className="max-w-7xl mx-auto px-6 py-8">
           <div className="mb-8">
@@ -359,6 +357,5 @@ export default function BestPracticesPage() {
           )}
         </div>
       </div>
-    </AuthGuard>
   );
 }
