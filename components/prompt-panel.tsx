@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -24,11 +24,14 @@ import { supabase } from '@/lib/supabase';
 interface PromptPanelProps {
   sessionId: string;
 }
+import * as tokenizer from '@anthropic-ai/tokenizer';
 
 export function PromptPanel({ sessionId }: PromptPanelProps) {
   const [prompt, setPrompt] = useState('');
   const [activeTab, setActiveTab] = useState('write');
   const [promptHistory, setPromptHistory] = useState<string[]>([]);
+  const [lastPromptTokenCount, setLastPromptTokenCount] = useState(0);
+  const [lastResponseTokenCount, setLastResponseTokenCount] = useState(0);
   const { code, setCode, isLoading, setIsLoading, promptQualityScore, setPromptQualityScore, promptMetrics, setPromptMetrics, activeFile } = useEditor();
 
   // Function to save prompt to database
@@ -96,9 +99,46 @@ export function PromptPanel({ sessionId }: PromptPanelProps) {
     fetchPromptHistory();
   }, [sessionId]);
 
+  // Calculate token count using Anthropic tokenizer
+  const tokenCount = useMemo(() => {
+    try {
+      console.log('Attempting to count tokens for:', prompt);
+      console.log('tokenizer object:', tokenizer);
+      console.log('Available methods:', Object.keys(tokenizer));
+      
+      // Test the tokenizer with a simple example first
+      const testTokens = tokenizer.countTokens("Hello world");
+      console.log('Test tokenizer works:', testTokens);
+      
+      const tokens = tokenizer.countTokens(prompt);
+      console.log('Token count:', tokens, 'for prompt:', prompt);
+      return tokens;
+    } catch (error) {
+      console.error('Error counting tokens:', error);
+      console.error('Error details:', error instanceof Error ? error.message : String(error));
+      
+      // Fallback: rough estimation (1 token ≈ 4 characters for English text)
+      const estimatedTokens = Math.ceil(prompt.length / 4);
+      console.log('Using fallback estimation:', estimatedTokens);
+      return estimatedTokens;
+    }
+  }, [prompt]);
+
   const handleSubmit = async () => {
     if (!prompt.trim()) {
       return;
+    }
+
+    // Store the token count of the submitted prompt
+    try {
+      const submittedTokenCount = tokenizer.countTokens(prompt);
+      setLastPromptTokenCount(submittedTokenCount);
+      console.log('Stored token count for submitted prompt:', submittedTokenCount);
+    } catch (error) {
+      console.error('Error counting tokens for submitted prompt:', error);
+      // Fallback estimation
+      const estimatedTokens = Math.ceil(prompt.length / 4);
+      setLastPromptTokenCount(estimatedTokens);
     }
 
     setIsLoading(true);
@@ -207,6 +247,18 @@ Return only the complete code, no explanations.`;
         cleanedCode = cleanedCode.replace(/^```\w*\n?/gm, '');
         cleanedCode = cleanedCode.replace(/\n?```$/gm, '');
 
+        // Count tokens in Claude's response
+        try {
+          const responseTokenCount = tokenizer.countTokens(cleanedCode);
+          setLastResponseTokenCount(responseTokenCount);
+          console.log('Claude response token count:', responseTokenCount);
+        } catch (error) {
+          console.error('Error counting response tokens:', error);
+          // Fallback estimation
+          const estimatedTokens = Math.ceil(cleanedCode.length / 4);
+          setLastResponseTokenCount(estimatedTokens);
+        }
+
         // Update the editor with cleaned response
         // This will trigger the auto-save system if there's an active file
         setCode(cleanedCode.trim());
@@ -225,7 +277,9 @@ Return only the complete code, no explanations.`;
 **Original Prompt:**
 ${prompt}
 
-Please try again or check your configuration.`);
+
+
+zPlease try again or check your configuration.`);
       }
 
       // Handle evaluation response
@@ -358,8 +412,8 @@ Please try again or check your configuration.`);
                 className="min-h-32 bg-gray-900 border-gray-700 text-gray-100 resize-none focus:border-blue-500"
                 disabled={isLoading}
               />
-              <div className="text-xs text-gray-500">
-                {prompt.length}/500 characters
+              <div className="text-xs text-blue-400 font-medium">
+                {tokenCount} tokens
               </div>
             </div>
 
@@ -486,6 +540,44 @@ Please try again or check your configuration.`);
 
         {activeTab === 'analyze' && (
           <div className="p-4 space-y-4">
+            <Card className="bg-gray-900 border-gray-700 p-3">
+              <h3 className="text-sm font-medium text-gray-300 mb-2">
+                Token Counts
+              </h3>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <span className="text-sm text-gray-400">Prompt:</span>
+                    <div className="text-lg font-bold text-blue-400">
+                      {lastPromptTokenCount}
+                    </div>
+                    <span className="text-xs text-gray-500">tokens</span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <span className="text-sm text-gray-400">Response:</span>
+                    <div className="text-lg font-bold text-green-400">
+                      {lastResponseTokenCount}
+                    </div>
+                    <span className="text-xs text-gray-500">tokens</span>
+                  </div>
+                </div>
+                <div className="pt-2 border-t border-gray-700">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-400">Total:</span>
+                    <div className="text-lg font-bold text-purple-400">
+                      {lastPromptTokenCount + lastResponseTokenCount}
+                    </div>
+                    <span className="text-xs text-gray-500">tokens</span>
+                  </div>
+                </div>
+              </div>
+              <div className="text-xs text-gray-500 mt-2">
+                {lastPromptTokenCount > 0 ? 'From last submitted prompt and response' : 'No prompts submitted yet'}
+              </div>
+            </Card>
+
             <Card className="bg-gray-900 border-gray-700 p-3">
               <h3 className="text-sm font-medium text-gray-300 mb-2">
                 Prompt Quality Score
