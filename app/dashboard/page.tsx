@@ -230,24 +230,10 @@ export default function DashboardPage() {
                 <BarChart3 className="w-4 h-4 mr-2" />
                 Leaderboard
               </Button>
-              <Button variant="ghost" size="sm" className="text-gray-300 hover:text-white hover:bg-gray-800">
-                <Users className="w-4 h-4 mr-2" />
-                Battles
-              </Button>
             </div>
           </div>
 
           <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2 text-sm text-gray-400">
-              <span>Rank:</span>
-              <Badge className="bg-blue-900 text-blue-200 border-blue-700">
-                #1,247
-              </Badge>
-            </div>
-
-            <Button variant="ghost" size="sm" className="text-gray-300 hover:text-white hover:bg-gray-800">
-              <Settings className="w-4 h-4" />
-            </Button>
 
             <LogoutButton />
           </div>
