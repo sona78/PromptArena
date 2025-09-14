@@ -452,18 +452,13 @@ export default function DashboardPage() {
         {/* Main Content */}
         <div className="max-w-7xl mx-auto px-6 py-8">
           <div className="mb-8">
-<<<<<<< HEAD
-            <h1 className="text-title-lg text-gray-900 mb-2">CHALLENGES</h1>
-            <p className="text-body-lg text-gray-600">Test your prompt engineering skills with these organized challenges.</p>
-=======
-            <h1 className="text-3xl font-semibold text-gray-900 mb-2">Challenges</h1>
-            <p className="text-gray-600">Test your prompt engineering skills with these organized challenges.</p>
->>>>>>> 2bcd745916ad362d9e238c0545a55984baf0f7ee
+            <h1 className="text-title-lg text-[#28282D] mb-2">CHALLENGES</h1>
+            <p className="text-body-lg text-[#79797C]">Test your prompt engineering skills with these organized challenges.</p>
           </div>
 
           {loading ? (
             <div className="flex items-center justify-center min-h-64">
-              <div className="text-body text-gray-500">Loading challenges...</div>
+              <div className="text-body text-[#79797C]">Loading challenges...</div>
             </div>
           ) : (
             <div className="space-y-8">
