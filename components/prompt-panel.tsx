@@ -20,11 +20,12 @@ import {
 import { useEditor } from "./editor-context";
 import { InfiniteScrollContainer } from "./infinite-scroll-container";
 import { supabase } from '@/lib/supabase';
+import * as tokenizer from '@anthropic-ai/tokenizer';
 
 interface PromptPanelProps {
   sessionId: string;
 }
-import * as tokenizer from '@anthropic-ai/tokenizer';
+
 
 export function PromptPanel({ sessionId }: PromptPanelProps) {
   const [prompt, setPrompt] = useState('');
