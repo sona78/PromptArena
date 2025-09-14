@@ -1,8 +1,7 @@
 'use client';
 
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Settings, Users, Trophy, BarChart3 } from "lucide-react";
+import { Settings, Trophy } from "lucide-react";
 import Link from "next/link";
 
 export function Navigation() {

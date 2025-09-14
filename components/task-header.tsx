@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Clock, Target, Zap } from "lucide-react";
+import { Target } from "lucide-react";
 import { supabase } from '@/lib/supabase';
 
 interface Task {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React from 'react';
 import { Editor } from '@monaco-editor/react';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,14 +16,12 @@ export function CodeEditor() {
   const {
     code,
     setCode,
-    language,
     activeFile,
     saveFile,
     isLoading,
     executionResult,
     setExecutionResult,
     isExecuting,
-    setIsExecuting,
     isSaving,
     hasUnsavedChanges,
     executeMultiFile

@@ -33,7 +33,7 @@ export function ResultsPanel({ result, isRunning }: ResultsPanelProps) {
       <div className="bg-gray-900 border-t border-gray-800 p-4">
         <div className="flex items-center space-x-2 text-gray-500">
           <Terminal className="w-4 h-4" />
-          <span className="text-sm">Click "Test Prompt" to run your code</span>
+          <span className="text-sm">Click &quot;Test Prompt&quot; to run your code</span>
         </div>
       </div>
     );

@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -10,7 +9,6 @@ import {
   Send,
   Sparkles,
   Brain,
-  Clock,
   History,
   File,
   Mic,
@@ -20,7 +18,6 @@ import {
 import { useEditor } from "./editor-context";
 import { supabase } from '@/lib/supabase';
 import { useVoiceRecording } from '@/hooks/use-voice-recording';
-import * as tokenizer from '@anthropic-ai/tokenizer';
 
 interface PromptPanelProps {
   sessionId: string;
@@ -33,7 +30,7 @@ export function PromptPanel({ sessionId }: PromptPanelProps) {
   const [promptHistory, setPromptHistory] = useState<string[]>([]);
   const [lastPromptTokenCount, setLastPromptTokenCount] = useState(0);
   const [lastResponseTokenCount, setLastResponseTokenCount] = useState(0);
-  const { code, setCode, isLoading, setIsLoading, promptQualityScore, setPromptQualityScore, promptMetrics, setPromptMetrics, activeFile } = useEditor();
+  const { code, setCode, isLoading, setIsLoading, promptQualityScore, setPromptQualityScore, promptMetrics, setPromptMetrics, activeFile, promptChainingScore, codeEvaluationScore, codeAccuracyScore, setPromptChainingScore, setCodeEvaluationScore, setCodeAccuracyScore } = useEditor();
   
   // Voice recording hook
   const { 
@@ -83,7 +80,7 @@ export function PromptPanel({ sessionId }: PromptPanelProps) {
   };
 
   // Function to save feedback (prompt metrics) to database
-  const saveFeedbackToDatabase = async (metrics: any, qualityScore: number) => {
+  const saveFeedbackToDatabase = async (metrics: Record<string, unknown>, qualityScore: number) => {
     if (!sessionId) return;
 
     try {
@@ -107,7 +104,11 @@ export function PromptPanel({ sessionId }: PromptPanelProps) {
           metrics: metrics,
           qualityScore: qualityScore,
           promptTokenCount: lastPromptTokenCount,
-          responseTokenCount: lastResponseTokenCount
+          responseTokenCount: lastResponseTokenCount,
+          // Store prompt chaining data from left file system panel
+          promptChainingScore: promptChainingScore,
+          codeEvaluationScore: codeEvaluationScore,
+          codeAccuracyScore: codeAccuracyScore
         }
       };
 
@@ -175,23 +176,52 @@ export function PromptPanel({ sessionId }: PromptPanelProps) {
 
       // Get the most recent prompt analysis feedback
       const feedbackEntries = Object.values(feedback)
-        .filter((item: any) => item.type === 'prompt_analysis')
-        .sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+        .filter((item: unknown): item is { type: string; timestamp: string } =>
+          typeof item === 'object' && item !== null && 'type' in item && item.type === 'prompt_analysis'
+        )
+        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
       const recentAnalysis = feedbackEntries[0];
 
-      if (recentAnalysis && recentAnalysis.data) {
+      if (
+        recentAnalysis &&
+        typeof recentAnalysis === "object" &&
+        "data" in recentAnalysis &&
+        recentAnalysis.data &&
+        typeof recentAnalysis.data === "object"
+      ) {
+        const data = recentAnalysis.data as {
+          metrics?: Record<string, unknown>;
+          qualityScore?: number;
+          promptTokenCount?: number;
+          responseTokenCount?: number;
+          promptChainingScore?: number;
+          codeEvaluationScore?: number;
+          codeAccuracyScore?: number;
+        };
+
         // Restore the metrics and scores from the most recent analysis
-        if (recentAnalysis.data.metrics) {
-          setPromptMetrics(recentAnalysis.data.metrics);
+        if (data.metrics) {
+          setPromptMetrics(data.metrics);
         }
-        if (recentAnalysis.data.qualityScore) {
-          setPromptQualityScore(recentAnalysis.data.qualityScore);
+        if (data.qualityScore) {
+          setPromptQualityScore(data.qualityScore);
         }
-        if (recentAnalysis.data.promptTokenCount) {
-          setLastPromptTokenCount(recentAnalysis.data.promptTokenCount);
+        if (data.promptTokenCount) {
+          setLastPromptTokenCount(data.promptTokenCount);
         }
-        if (recentAnalysis.data.responseTokenCount) {
-          setLastResponseTokenCount(recentAnalysis.data.responseTokenCount);
+        if (data.responseTokenCount) {
+          setLastResponseTokenCount(data.responseTokenCount);
+        }
+        // Restore prompt chaining data from feedback object
+        // These will be displayed in the left file system panel
+        if (data.promptChainingScore !== undefined) {
+          setPromptChainingScore(data.promptChainingScore);
+        }
+        if (data.codeEvaluationScore !== undefined) {
+          setCodeEvaluationScore(data.codeEvaluationScore);
+        }
+        if (data.codeAccuracyScore !== undefined) {
+          setCodeAccuracyScore(data.codeAccuracyScore);
         }
       }
     } catch (error) {

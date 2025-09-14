@@ -99,7 +99,7 @@ export function LoginForm({
               </Button>
             </div>
             <div className="mt-8 text-center">
-              <span className="text-stone-600 font-light">Don't have an account? </span>
+              <span className="text-stone-600 font-light">Don&apos;t have an account? </span>
               <Link
                 href="/auth/sign-up"
                 className="text-stone-800 hover:text-stone-900 font-light tracking-wide transition-colors duration-300"

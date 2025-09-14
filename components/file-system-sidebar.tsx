@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Folder, File, ChevronRight, ChevronDown, Loader2, Plus, Trash2, MoreHorizontal, Lock, Shield } from 'lucide-react';
+import { Folder, File, ChevronRight, ChevronDown, Loader2, Plus, Trash2, MoreHorizontal, Lock } from 'lucide-react';
 import { useEditor } from './editor-context';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -31,7 +31,6 @@ export function FileSystemSidebar({ sessionId }: FileSystemSidebarProps) {
   const [error, setError] = useState<string | null>(null);
   const [creatingFile, setCreatingFile] = useState(false);
   const [newFileName, setNewFileName] = useState('');
-  const [entryFile, setEntryFile] = useState<string>('');
   const [testFile, setTestFile] = useState<string>('');
   const { openFile, activeFile, closeFile, codeEvaluationScore, promptChainingScore, codeAccuracyScore } = useEditor();
 
@@ -40,7 +39,7 @@ export function FileSystemSidebar({ sessionId }: FileSystemSidebarProps) {
       fetchFiles();
       fetchTaskFiles();
     }
-  }, [sessionId]);
+  }, [sessionId]); // fetchFiles and fetchTaskFiles are defined inside the component and will cause infinite re-renders if added
 
   const fetchFiles = async () => {
     try {
@@ -58,7 +57,7 @@ export function FileSystemSidebar({ sessionId }: FileSystemSidebarProps) {
       }
 
       // Build file tree structure
-      let fileTree = buildFileTree(data || []);
+      const fileTree = buildFileTree(data || []);
 
       // Only add test file to the file tree if it exists in storage and is not already in the list
       if (testFile && !fileTree.some(f => f.name === testFile)) {
@@ -89,14 +88,14 @@ export function FileSystemSidebar({ sessionId }: FileSystemSidebarProps) {
     }
   };
 
-  // Refresh files when test file or entry file changes
+  // Refresh files when test file changes
   useEffect(() => {
-    if ((testFile || entryFile) && sessionId) {
+    if (testFile && sessionId) {
       fetchFiles();
     }
-  }, [testFile, entryFile]);
+  }, [testFile, sessionId]); // fetchFiles would cause infinite re-renders if added
 
-  const buildFileTree = (items: any[]): FileItem[] => {
+  const buildFileTree = (items: Array<Record<string, unknown>>): FileItem[] => {
     const tree: FileItem[] = [];
 
     items.forEach(item => {
@@ -155,10 +154,10 @@ export function FileSystemSidebar({ sessionId }: FileSystemSidebarProps) {
         return;
       }
 
-      // Then get the test_file and entry_file from the task
+      // Then get the test_file from the task
       const { data: task, error: taskError } = await supabase
         .from('Tasks')
-        .select('test_file, entry_file')
+        .select('test_file')
         .eq('task_id', session.task_id)
         .single();
 
@@ -169,10 +168,6 @@ export function FileSystemSidebar({ sessionId }: FileSystemSidebarProps) {
 
       if (task?.test_file) {
         setTestFile(task.test_file);
-      }
-
-      if (task?.entry_file) {
-        setEntryFile(task.entry_file);
       }
     } catch (error) {
       console.error('Error fetching task files:', error);
@@ -218,11 +213,6 @@ export function FileSystemSidebar({ sessionId }: FileSystemSidebarProps) {
   };
 
   const deleteFile = async (fileName: string) => {
-    if (fileName === entryFile) {
-      setError('Cannot delete entry file');
-      return;
-    }
-
     if (fileName === testFile) {
       setError('Cannot delete test file');
       return;
@@ -269,9 +259,8 @@ export function FileSystemSidebar({ sessionId }: FileSystemSidebarProps) {
   const renderFileItem = (item: FileItem, index: number, level = 0) => {
     const paddingLeft = level * 16 + 8;
     const isActive = activeFile?.path === item.path;
-    const isEntryFile = item.name === entryFile;
     const isTestFile = item.name === testFile;
-    const isLocked = isEntryFile || isTestFile;
+    const isLocked = isTestFile;
 
     return (
       <div key={`${item.path}-${index}`}>
@@ -300,13 +289,12 @@ export function FileSystemSidebar({ sessionId }: FileSystemSidebarProps) {
                 {isTestFile ? (
                   <Lock className="w-4 h-4 mr-2 text-red-400" />
                 ) : (
-                  <File className={`w-4 h-4 mr-2 ${isEntryFile ? 'text-green-400' : 'text-gray-400'}`} />
+                  <File className="w-4 h-4 mr-2 text-gray-400" />
                 )}
               </>
             )}
             <span className={`truncate ${isActive ? 'text-blue-200 font-medium' : 'text-gray-200'} ${isTestFile ? 'opacity-75' : ''}`}>
               {item.name}
-              {isEntryFile && <span className="text-xs text-green-400 ml-1">(entry)</span>}
               {isTestFile && <span className="text-xs text-red-400 ml-1">(test - locked)</span>}
             </span>
           </div>

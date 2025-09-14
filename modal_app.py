@@ -23,6 +23,8 @@ image = modal.Image.debian_slim().pip_install([
     "pillow",
     "scikit-learn",
     "seaborn",
+    "pickle",
+    "io",
 ])
 
 # Separate web image for endpoints

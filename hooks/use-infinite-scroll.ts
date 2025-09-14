@@ -20,7 +20,7 @@ interface UseInfiniteScrollReturn<T> {
   error: string | null;
   loadMore: () => void;
   refresh: () => void;
-  containerRef: React.RefObject<HTMLDivElement>;
+  containerRef: React.RefObject<HTMLDivElement | null>;
 }
 
 export function useInfiniteScroll<T>({

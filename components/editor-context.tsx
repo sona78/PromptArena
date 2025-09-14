@@ -38,8 +38,8 @@ interface EditorContextType {
   hasUnsavedChanges: boolean;
   promptQualityScore: number;
   setPromptQualityScore: (score: number) => void;
-  promptMetrics: any;
-  setPromptMetrics: (metrics: any) => void;
+  promptMetrics: Record<string, unknown> | null;
+  setPromptMetrics: (metrics: Record<string, unknown> | null) => void;
   codeEvaluationScore: number | null;
   setCodeEvaluationScore: (score: number | null) => void;
   promptChainingScore: number | null;
@@ -52,28 +52,7 @@ interface EditorContextType {
 
 const EditorContext = createContext<EditorContextType | undefined>(undefined);
 
-const getDefaultCode = (language: 'javascript' | 'python') => {
-  if (language === 'javascript') {
-    return `// Hello World in JavaScript
-console.log('Hello, World!');
-
-// Example function
-function greet(name) {
-  return \`Hello, \${name}!\`;
-}
-
-console.log(greet('JavaScript'));`;
-  } else {
-    return `# Hello World in Python
-print('Hello, World!')
-
-# Example function
-def greet(name):
-    return f'Hello, {name}!'
-
-print(greet('Python'))`;
-  }
-};
+// Removed unused getDefaultCode function
 
 const getFileLanguage = (fileName: string): 'javascript' | 'python' | 'text' => {
   const ext = fileName.split('.').pop()?.toLowerCase();
@@ -284,8 +263,6 @@ export function EditorProvider({ children }: { children: ReactNode }) {
       setExecutionResult(result);
 
       // Run all three evaluations in parallel and wait for all to complete
-      const evaluationPromises = [];
-
       // Code evaluation promise
       const codeEvaluationPromise = fetch('/api/evaluate-code', {
         method: 'POST',
@@ -364,8 +341,8 @@ export function EditorProvider({ children }: { children: ReactNode }) {
         if (accuracyEvaluationResult.success && accuracyEvaluationResult.evaluation) {
           setCodeAccuracyScore(accuracyEvaluationResult.evaluation.AccuracyScore);
         }
-      } catch (error) {
-        console.error('Error running evaluations:', error);
+      } catch (evaluationError) {
+        console.error('Error running evaluations:', evaluationError);
       }
     } catch (error) {
       setExecutionResult({
