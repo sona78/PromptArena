@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -19,15 +19,95 @@ import {
 } from "lucide-react";
 import { useEditor } from "./editor-context";
 import { InfiniteScrollContainer } from "./infinite-scroll-container";
+<<<<<<< HEAD
+=======
+import { supabase } from '@/lib/supabase';
+import * as tokenizer from '@anthropic-ai/tokenizer';
+>>>>>>> 267315932b338b21ba6d50cb0bfa7d44f1f96a25
 
-export function PromptPanel() {
+interface PromptPanelProps {
+  sessionId: string;
+}
+
+
+export function PromptPanel({ sessionId }: PromptPanelProps) {
   const [prompt, setPrompt] = useState('');
   const [activeTab, setActiveTab] = useState('write');
+  const [promptHistory, setPromptHistory] = useState<string[]>([]);
   const [lastPromptTokenCount, setLastPromptTokenCount] = useState(0);
   const [lastResponseTokenCount, setLastResponseTokenCount] = useState(0);
   const { code, setCode, isLoading, setIsLoading, promptQualityScore, setPromptQualityScore, promptMetrics, setPromptMetrics, activeFile } = useEditor();
 
+<<<<<<< HEAD
   // Calculate token count using simple estimation
+=======
+  // Function to save prompt to database
+  const savePromptToDatabase = async (promptText: string) => {
+    if (!sessionId) return;
+
+    try {
+      // Get current session data
+      const { data: session, error: sessionError } = await supabase
+        .from('Sessions')
+        .select('prompts')
+        .eq('session_id', sessionId)
+        .single();
+
+      if (sessionError) {
+        console.error('Error fetching session:', sessionError);
+        return;
+      }
+
+      // Add new prompt to existing prompts array
+      const updatedPrompts = [...(session.prompts || []), promptText];
+
+      // Update session with new prompts array
+      const { error: updateError } = await supabase
+        .from('Sessions')
+        .update({ prompts: updatedPrompts })
+        .eq('session_id', sessionId);
+
+      if (updateError) {
+        console.error('Error updating prompts:', updateError);
+        return;
+      }
+
+      // Update local state
+      setPromptHistory(updatedPrompts);
+    } catch (error) {
+      console.error('Error saving prompt:', error);
+    }
+  };
+
+  // Function to fetch prompt history
+  const fetchPromptHistory = async () => {
+    if (!sessionId) return;
+
+    try {
+      const { data: session, error } = await supabase
+        .from('Sessions')
+        .select('prompts')
+        .eq('session_id', sessionId)
+        .single();
+
+      if (error) {
+        console.error('Error fetching prompt history:', error);
+        return;
+      }
+
+      setPromptHistory(session.prompts || []);
+    } catch (error) {
+      console.error('Error fetching prompt history:', error);
+    }
+  };
+
+  // Fetch prompt history on component mount
+  useEffect(() => {
+    fetchPromptHistory();
+  }, [sessionId]);
+
+  // Calculate token count using Anthropic tokenizer
+>>>>>>> 267315932b338b21ba6d50cb0bfa7d44f1f96a25
   const tokenCount = useMemo(() => {
     // Simple estimation: 1 token ≈ 4 characters for English text
     return Math.ceil(prompt.length / 4);
@@ -156,6 +236,9 @@ Return only the complete code, no explanations.`;
         // This will trigger the auto-save system if there's an active file
         setCode(cleanedCode.trim());
 
+        // Save prompt to database
+        await savePromptToDatabase(prompt);
+
         // Clear the prompt after successful submission
         setPrompt('');
       } else {
@@ -217,22 +300,21 @@ zPlease try again or check your configuration.`);
     }
   };
 
-  // Mock data fetcher for prompt history
-  const fetchPromptHistory = async (page: number, limit: number) => {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 800));
-
-    // Mock data - in real app, this would fetch from Supabase
-    const allPrompts = Array.from({ length: 100 }, (_, i) => ({
-      id: i + 1,
-      prompt: `Example prompt ${i + 1}: Write a creative story about ${['dragons', 'robots', 'magic', 'space', 'time travel'][i % 5]}`,
-      score: Math.floor(Math.random() * 100) + 1,
-      timestamp: new Date(Date.now() - i * 1000 * 60 * 60),
-      status: ['pending', 'completed', 'failed'][i % 3]
-    }));
-
+  // Real data fetcher for prompt history
+  const fetchPromptHistoryPaginated = async (page: number, limit: number) => {
+    // Get all prompts and paginate locally since we store them as a simple array
     const startIndex = (page - 1) * limit;
     const endIndex = startIndex + limit;
+
+    // Transform prompt history into the expected format
+    const allPrompts = promptHistory.map((promptText, index) => ({
+      id: index + 1,
+      prompt: promptText,
+      score: 0, // We don't store scores per prompt currently
+      timestamp: new Date(), // We don't store timestamps per prompt currently
+      status: 'completed'
+    })).reverse(); // Show newest first
+
     const pageData = allPrompts.slice(startIndex, endIndex);
 
     return {
@@ -339,6 +421,28 @@ zPlease try again or check your configuration.`);
               }
             </Button>
 
+            {promptHistory.length > 0 && (
+              <div className="pt-4 border-t border-gray-800">
+                <h3 className="text-sm font-medium text-gray-300 mb-2 flex items-center">
+                  <History className="w-4 h-4 mr-1 text-blue-400" />
+                  Recent Prompts ({promptHistory.length})
+                </h3>
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {promptHistory.slice(-3).reverse().map((historyPrompt, index) => (
+                    <div
+                      key={index}
+                      className="bg-gray-900 border border-gray-700 rounded p-2 cursor-pointer hover:bg-gray-800 transition-colors"
+                      onClick={() => setPrompt(historyPrompt)}
+                    >
+                      <p className="text-xs text-gray-300 line-clamp-2">
+                        {historyPrompt}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="pt-4 border-t border-gray-800">
               <h3 className="text-sm font-medium text-gray-300 mb-2 flex items-center">
                 <Sparkles className="w-4 h-4 mr-1 text-yellow-400" />
@@ -357,7 +461,7 @@ zPlease try again or check your configuration.`);
         {activeTab === 'history' && (
           <div className="flex-1 overflow-hidden">
             <InfiniteScrollContainer
-              fetchData={fetchPromptHistory}
+              fetchData={fetchPromptHistoryPaginated}
               renderItem={(item: any) => (
                 <Card className="bg-gray-900 border-gray-700 p-3 mx-4 mb-2">
                   <div className="space-y-2">

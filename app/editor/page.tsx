@@ -20,7 +20,7 @@ export default function EditorPage() {
         <Navigation />
 
         {/* Task Header */}
-        <TaskHeader />
+        <TaskHeader sessionId={sessionId || ''} />
 
         {/* Main Content Area */}
         <EditorProvider>
@@ -35,7 +35,7 @@ export default function EditorPage() {
 
             {/* Right Panel - Prompt Writing */}
             <div className="w-96 flex flex-col">
-              <PromptPanel />
+              <PromptPanel sessionId={sessionId || ''} />
             </div>
           </div>
         </EditorProvider>
