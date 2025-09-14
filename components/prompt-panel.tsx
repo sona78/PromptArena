@@ -10,9 +10,6 @@ import {
   Send,
   Sparkles,
   Brain,
-  TrendingUp,
-  Users,
-  Star,
   Clock,
   History,
   File,
@@ -21,7 +18,6 @@ import {
   Loader2
 } from "lucide-react";
 import { useEditor } from "./editor-context";
-import { InfiniteScrollContainer } from "./infinite-scroll-container";
 import { supabase } from '@/lib/supabase';
 import { useVoiceRecording } from '@/hooks/use-voice-recording';
 import * as tokenizer from '@anthropic-ai/tokenizer';
@@ -86,6 +82,56 @@ export function PromptPanel({ sessionId }: PromptPanelProps) {
     }
   };
 
+  // Function to save feedback (prompt metrics) to database
+  const saveFeedbackToDatabase = async (metrics: any, qualityScore: number) => {
+    if (!sessionId) return;
+
+    try {
+      // Get current session feedback
+      const { data: session, error: sessionError } = await supabase
+        .from('Sessions')
+        .select('feedback')
+        .eq('session_id', sessionId)
+        .single();
+
+      if (sessionError) {
+        console.error('Error fetching session feedback:', sessionError);
+        return;
+      }
+
+      // Create feedback entry
+      const feedbackEntry = {
+        timestamp: new Date().toISOString(),
+        type: 'prompt_analysis',
+        data: {
+          metrics: metrics,
+          qualityScore: qualityScore,
+          promptTokenCount: lastPromptTokenCount,
+          responseTokenCount: lastResponseTokenCount
+        }
+      };
+
+      // Add to existing feedback array
+      const currentFeedback = session?.feedback || [];
+      const updatedFeedback = [...currentFeedback, feedbackEntry];
+
+      // Update session with new feedback
+      const { error: updateError } = await supabase
+        .from('Sessions')
+        .update({ feedback: updatedFeedback })
+        .eq('session_id', sessionId);
+
+      if (updateError) {
+        console.error('Error updating feedback:', updateError);
+        return;
+      }
+
+      console.log('Feedback saved successfully');
+    } catch (error) {
+      console.error('Error saving feedback:', error);
+    }
+  };
+
   // Function to fetch prompt history
   const fetchPromptHistory = async () => {
     if (!sessionId) return;
@@ -108,9 +154,53 @@ export function PromptPanel({ sessionId }: PromptPanelProps) {
     }
   };
 
-  // Fetch prompt history on component mount
+  // Function to fetch feedback data
+  const fetchFeedbackData = async () => {
+    if (!sessionId) return;
+
+    try {
+      const { data: session, error } = await supabase
+        .from('Sessions')
+        .select('feedback')
+        .eq('session_id', sessionId)
+        .single();
+
+      if (error) {
+        console.error('Error fetching feedback:', error);
+        return;
+      }
+
+      const feedback = session.feedback || [];
+
+      // Get the most recent prompt analysis feedback
+      const recentAnalysis = feedback
+        .filter((item: any) => item.type === 'prompt_analysis')
+        .sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0];
+
+      if (recentAnalysis && recentAnalysis.data) {
+        // Restore the metrics and scores from the most recent analysis
+        if (recentAnalysis.data.metrics) {
+          setPromptMetrics(recentAnalysis.data.metrics);
+        }
+        if (recentAnalysis.data.qualityScore) {
+          setPromptQualityScore(recentAnalysis.data.qualityScore);
+        }
+        if (recentAnalysis.data.promptTokenCount) {
+          setLastPromptTokenCount(recentAnalysis.data.promptTokenCount);
+        }
+        if (recentAnalysis.data.responseTokenCount) {
+          setLastResponseTokenCount(recentAnalysis.data.responseTokenCount);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching feedback:', error);
+    }
+  };
+
+  // Fetch prompt history and feedback data on component mount
   useEffect(() => {
     fetchPromptHistory();
+    fetchFeedbackData();
   }, [sessionId]);
 
   // Calculate token count using Anthropic tokenizer
@@ -287,12 +377,17 @@ zPlease try again or check your configuration.`);
             setPromptMetrics(evaluation);
 
             // Set the final score
+            let finalScore = 0;
             if (
               Object.prototype.hasOwnProperty.call(evaluation, 'final score') &&
               typeof evaluation['final score'] === 'number'
             ) {
-              setPromptQualityScore(evaluation['final score']);
+              finalScore = evaluation['final score'];
+              setPromptQualityScore(finalScore);
             }
+
+            // Save feedback to database
+            await saveFeedbackToDatabase(evaluation, finalScore);
           } else {
             // Fallback: try to extract just the number after "final score"
             const scoreMatch = content.match(/"final score":\s*(\d+(?:\.\d+)?)/);
@@ -318,35 +413,10 @@ zPlease try again or check your configuration.`);
     }
   };
 
-  // Real data fetcher for prompt history
-  const fetchPromptHistoryPaginated = async (page: number, limit: number) => {
-    // Get all prompts and paginate locally since we store them as a simple array
-    const startIndex = (page - 1) * limit;
-    const endIndex = startIndex + limit;
-
-    // Transform prompt history into the expected format
-    const allPrompts = promptHistory.map((promptText, index) => ({
-      id: index + 1,
-      prompt: promptText,
-      score: 0, // We don't store scores per prompt currently
-      timestamp: new Date(), // We don't store timestamps per prompt currently
-      status: 'completed'
-    })).reverse(); // Show newest first
-
-    const pageData = allPrompts.slice(startIndex, endIndex);
-
-    return {
-      data: pageData,
-      hasMore: endIndex < allPrompts.length,
-      nextPage: page + 1
-    };
-  };
 
   const tabs = [
     { id: 'write', label: 'Write Prompt', icon: MessageSquare },
-    { id: 'history', label: 'History', icon: History },
     { id: 'analyze', label: 'Analysis', icon: Brain },
-    { id: 'leaderboard', label: 'Rankings', icon: TrendingUp },
   ];
 
   return (
@@ -451,22 +521,6 @@ zPlease try again or check your configuration.`);
               </div>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-300">
-                Prompt Style
-              </label>
-              <div className="flex flex-wrap gap-2">
-                {['Creative', 'Structured', 'Open-ended', 'Detailed'].map((style) => (
-                  <Badge
-                    key={style}
-                    variant="outline"
-                    className="cursor-pointer border-gray-600 text-gray-400 hover:border-blue-500 hover:text-blue-400"
-                  >
-                    {style}
-                  </Badge>
-                ))}
-              </div>
-            </div>
 
             <Button
               className="w-full bg-blue-600 hover:bg-blue-700 text-white"
@@ -519,58 +573,6 @@ zPlease try again or check your configuration.`);
           </div>
         )}
 
-        {activeTab === 'history' && (
-          <div className="flex-1 overflow-hidden">
-            <InfiniteScrollContainer
-              fetchData={fetchPromptHistoryPaginated}
-              renderItem={(item: any) => (
-                <Card className="bg-gray-900 border-gray-700 p-3 mx-4 mb-2">
-                  <div className="space-y-2">
-                    <div className="flex items-start justify-between">
-                      <p className="text-sm text-gray-300 flex-1 pr-2">
-                        {item.prompt}
-                      </p>
-                      <Badge
-                        variant="outline"
-                        className={`text-xs ${
-                          item.status === 'completed'
-                            ? 'border-green-600 text-green-400'
-                            : item.status === 'pending'
-                            ? 'border-yellow-600 text-yellow-400'
-                            : 'border-red-600 text-red-400'
-                        }`}
-                      >
-                        {item.status}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center justify-between text-xs text-gray-500">
-                      <div className="flex items-center space-x-2">
-                        <Clock className="w-3 h-3" />
-                        <span>{item.timestamp.toLocaleString()}</span>
-                      </div>
-                      {item.status === 'completed' && (
-                        <div className="flex items-center space-x-1">
-                          <Star className="w-3 h-3 text-yellow-400" />
-                          <span>{item.score}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </Card>
-              )}
-              renderEmpty={() => (
-                <div className="flex flex-col items-center justify-center h-full p-8 text-gray-400">
-                  <History className="w-12 h-12 mb-4 text-gray-600" />
-                  <h3 className="text-lg font-medium text-gray-300 mb-2">No prompt history</h3>
-                  <p className="text-sm text-center">Your submitted prompts will appear here</p>
-                </div>
-              )}
-              limit={10}
-              threshold={50}
-              className="h-full"
-            />
-          </div>
-        )}
 
         {activeTab === 'analyze' && (
           <div className="p-4 space-y-4">
@@ -682,96 +684,6 @@ zPlease try again or check your configuration.`);
           </div>
         )}
 
-        {activeTab === 'leaderboard' && (
-          <div className="h-full flex flex-col">
-            <div className="p-4 border-b border-gray-800">
-              <h3 className="text-sm font-medium text-gray-300 mb-1 flex items-center">
-                <Users className="w-4 h-4 mr-1" />
-                Top Prompters This Week
-              </h3>
-              <Card className="bg-gray-900 border-gray-700 p-2 mt-2">
-                <div className="flex items-center justify-between text-xs text-gray-400">
-                  <div className="flex items-center space-x-1">
-                    <Clock className="w-3 h-3" />
-                    <span>Next reset:</span>
-                  </div>
-                  <span>3d 14h 22m</span>
-                </div>
-              </Card>
-            </div>
-
-            <div className="flex-1 overflow-hidden">
-              <InfiniteScrollContainer
-                fetchData={async (page: number, limit: number) => {
-                  await new Promise(resolve => setTimeout(resolve, 600));
-
-                  const allUsers = Array.from({ length: 500 }, (_, i) => ({
-                    rank: i + 1,
-                    name: i === 3 ? 'You' : `User ${i + 1}`,
-                    score: Math.floor(Math.random() * 50) + 50 + (500 - i) * 0.1,
-                    badge: i === 0 ? '👑' : i === 1 ? '🥈' : i === 2 ? '🥉' : '',
-                    streak: Math.floor(Math.random() * 30) + 1,
-                    submissions: Math.floor(Math.random() * 100) + 10
-                  }));
-
-                  const startIndex = (page - 1) * limit;
-                  const endIndex = startIndex + limit;
-                  const pageData = allUsers.slice(startIndex, endIndex);
-
-                  return {
-                    data: pageData,
-                    hasMore: endIndex < allUsers.length
-                  };
-                }}
-                renderItem={(user: any) => (
-                  <Card
-                    className={`bg-gray-900 border-gray-700 p-3 mx-4 mb-2 ${
-                      user.name === 'You' ? 'border-blue-500 bg-blue-950/20' : ''
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <span className="text-sm font-medium text-gray-400 min-w-[32px]">
-                          #{user.rank}
-                        </span>
-                        <span className="text-sm text-gray-300">{user.name}</span>
-                        {user.badge && <span className="text-lg">{user.badge}</span>}
-                        {user.name === 'You' && (
-                          <Badge className="bg-blue-900 text-blue-200 text-xs">
-                            You
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="flex items-center space-x-3">
-                        <div className="text-right">
-                          <div className="flex items-center space-x-1">
-                            <Star className="w-3 h-3 text-yellow-400" />
-                            <span className="text-sm font-medium text-gray-300">
-                              {user.score.toFixed(1)}
-                            </span>
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            {user.submissions} prompts
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </Card>
-                )}
-                renderEmpty={() => (
-                  <div className="flex flex-col items-center justify-center h-full p-8 text-gray-400">
-                    <TrendingUp className="w-12 h-12 mb-4 text-gray-600" />
-                    <h3 className="text-lg font-medium text-gray-300 mb-2">No rankings available</h3>
-                    <p className="text-sm text-center">Complete some prompts to see the leaderboard</p>
-                  </div>
-                )}
-                limit={20}
-                threshold={100}
-                className="h-full pt-2"
-              />
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

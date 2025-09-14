@@ -22,7 +22,7 @@ image = modal.Image.debian_slim().pip_install([
     "beautifulsoup4",
     "pillow",
     "scikit-learn",
-    "seaborn"
+    "seaborn",
 ])
 
 # Separate web image for endpoints
