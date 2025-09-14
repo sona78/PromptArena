@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase/server';
+import { createClient } from '@/lib/supabase/server';
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,11 +16,31 @@ export async function POST(request: NextRequest) {
     }
 
     // Get the current user from the session
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    const supabase = await createClient();
     
-    if (userError || !user) {
+    let user;
+    try {
+      const { data: { user: authUser }, error: userError } = await supabase.auth.getUser();
+      user = authUser;
+      
+      if (userError) {
+        console.log('Auth error:', userError.message);
+        return NextResponse.json(
+          { error: 'Authentication required. Please log in.' },
+          { status: 401 }
+        );
+      }
+    } catch (error) {
+      console.log('Auth exception:', error);
       return NextResponse.json(
-        { error: 'Authentication required' },
+        { error: 'Authentication required. Please log in.' },
+        { status: 401 }
+      );
+    }
+    
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Authentication required. Please log in.' },
         { status: 401 }
       );
     }
@@ -32,9 +52,8 @@ export async function POST(request: NextRequest) {
         name: name.trim(),
         description: description.trim(),
         type: parseInt(type) || 0,
-        test_file_name: test_file_name?.trim() || null,
-        has_template_files: has_files || false,
-        leaderboard: []
+        test_file: test_file_name?.trim() || null,
+        criteria: null // Add criteria field as it exists in schema
       }])
       .select()
       .single();
@@ -55,7 +74,7 @@ export async function POST(request: NextRequest) {
 
         for (const [filePath, fileContent] of Object.entries(file_structure)) {
           // Create a blob from the file content
-          const blob = new Blob([fileContent], { type: 'text/plain' });
+          const blob = new Blob([fileContent as string], { type: 'text/plain' });
           
           // Upload to Templates bucket with task_id as folder
           const storagePath = `${taskId}/${filePath}`;
@@ -104,6 +123,9 @@ export async function POST(request: NextRequest) {
 export async function GET() {
   try {
     // Get all tasks
+    const supabase = await createClient();
+    
+    // For GET requests, we can be more lenient with auth - just get tasks without user check
     const { data, error } = await supabase
       .from('Tasks')
       .select('*')

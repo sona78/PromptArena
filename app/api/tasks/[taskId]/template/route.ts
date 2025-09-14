@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase/server';
+import { createClient } from '@/lib/supabase/server';
 
 export async function GET(
   request: NextRequest,
@@ -9,6 +9,7 @@ export async function GET(
     const taskId = params.taskId;
 
     // Get the current user from the session
+    const supabase = await createClient();
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     
     if (userError || !user) {
@@ -18,10 +19,10 @@ export async function GET(
       );
     }
 
-    // First check if the task exists and has template files
+    // First check if the task exists
     const { data: task, error: taskError } = await supabase
       .from('Tasks')
-      .select('task_id, name, has_template_files, test_file_name')
+      .select('task_id, name, test_file')
       .eq('task_id', taskId)
       .single();
 
@@ -32,16 +33,8 @@ export async function GET(
       );
     }
 
-    if (!task.has_template_files) {
-      return NextResponse.json({
-        success: true,
-        files: {},
-        task_info: {
-          name: task.name,
-          test_file_name: task.test_file_name
-        }
-      });
-    }
+    // Always try to list files from storage - if none exist, return empty
+    // This removes the dependency on has_template_files column
 
     // List all files in the task's template folder
     const { data: fileList, error: listError } = await supabase.storage
@@ -63,7 +56,7 @@ export async function GET(
     const files: Record<string, string> = {};
     
     if (fileList && fileList.length > 0) {
-      const downloadPromises = fileList.map(async (file) => {
+      const downloadPromises = fileList.map(async (file: any) => {
         if (file.name && !file.name.endsWith('/')) { // Skip directories
           try {
             const { data, error } = await supabase.storage
@@ -88,7 +81,7 @@ export async function GET(
       files,
       task_info: {
         name: task.name,
-        test_file_name: task.test_file_name
+        test_file: task.test_file
       }
     });
 
@@ -111,6 +104,7 @@ export async function POST(
     const { file_path } = await request.json();
 
     // Get the current user from the session
+    const supabase = await createClient();
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     
     if (userError || !user) {
