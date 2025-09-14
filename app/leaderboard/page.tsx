@@ -139,17 +139,15 @@ export default function LeaderboardPage() {
           </div>
 
           {/* Filter Dropdowns */}
-          <Card className="bg-white border border-gray-200 mb-6">
-            <CardContent className="p-6">
-              <div className="flex flex-wrap gap-4 justify-center">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="min-w-[200px] justify-between">
-                      {selectedChallenge === "all" ? "All Challenges" :
-                        tasks.find(t => t.task_id === selectedChallenge)?.name || "Select Challenge"}
-                      <ChevronDown className="w-4 h-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
+          <div className="flex flex-wrap gap-4 justify-center mb-6">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="min-w-[200px] justify-between font-display-serif font-bold tracking-wide text-base px-6 py-3">
+                  {selectedChallenge === "all" ? "All Challenges" :
+                    tasks.find(t => t.task_id === selectedChallenge)?.name || "Select Challenge"}
+                  <ChevronDown className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
                   <DropdownMenuContent className="max-h-60 overflow-y-auto">
                     <DropdownMenuItem onClick={() => handleChallengeChange("all")}>
                       All Challenges
@@ -167,13 +165,13 @@ export default function LeaderboardPage() {
                   </DropdownMenuContent>
                 </DropdownMenu>
 
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="min-w-[160px] justify-between">
-                      {selectedCategory}
-                      <ChevronDown className="w-4 h-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="min-w-[160px] justify-between font-display-serif font-bold tracking-wide text-base px-6 py-3">
+                  {selectedCategory}
+                  <ChevronDown className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
                   <DropdownMenuContent>
                     {categories.map((category) => (
                       <DropdownMenuItem key={category} onClick={() => setSelectedCategory(category)}>
@@ -183,24 +181,22 @@ export default function LeaderboardPage() {
                   </DropdownMenuContent>
                 </DropdownMenu>
 
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="min-w-[160px] justify-between">
-                      {selectedMetric}
-                      <ChevronDown className="w-4 h-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="min-w-[160px] justify-between font-display-serif font-bold tracking-wide text-base px-6 py-3">
+                  {selectedMetric}
+                  <ChevronDown className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
                   <DropdownMenuContent>
                     {metrics.map((metric) => (
                       <DropdownMenuItem key={metric} onClick={() => setSelectedMetric(metric)}>
                         {metric}
                       </DropdownMenuItem>
                     ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </CardContent>
-          </Card>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
 
           {/* Leaderboard Table */}
           <Card className="bg-white border border-gray-200">
@@ -220,18 +216,18 @@ export default function LeaderboardPage() {
                 </div>
               ) : (
                 <div className="overflow-hidden overflow-x-auto">
-                  <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
-                    <div className="grid grid-cols-10 gap-3 text-subtitle-sm text-gray-700 min-w-[1200px]">
-                      <div className="text-left">Rank</div>
-                      <div className="text-left">Username</div>
-                      <div className="text-center">Avg Score</div>
-                      <div className="text-center">Final Score</div>
-                      <div className="text-center">Chaining</div>
-                      <div className="text-center">Code Eval</div>
-                      <div className="text-center">Accuracy</div>
-                      <div className="text-center">Sessions</div>
-                      <div className="text-center">Prompts</div>
-                      <div className="text-center">Challenges</div>
+                  <div className="bg-[#28282D] px-6 py-4 border-b border-gray-200">
+                    <div className="grid grid-cols-10 gap-3 font-display-serif font-bold tracking-wide text-sm text-white min-w-[1200px]">
+                      <div className="text-left">RANK</div>
+                      <div className="text-left">USERNAME</div>
+                      <div className="text-center">AVG SCORE</div>
+                      <div className="text-center">FINAL SCORE</div>
+                      <div className="text-center">CHAINING</div>
+                      <div className="text-center">CODE EVAL</div>
+                      <div className="text-center">ACCURACY</div>
+                      <div className="text-center">SESSIONS</div>
+                      <div className="text-center">PROMPTS</div>
+                      <div className="text-center">CHALLENGES</div>
                     </div>
                   </div>
 
@@ -245,37 +241,37 @@ export default function LeaderboardPage() {
                       >
                         <div className="flex items-center space-x-2">
                           {getRankIcon(entry.rank)}
-                          <span className="text-body text-gray-700">#{entry.rank}</span>
+                          <span className="text-subtitle text-gray-700">#{entry.rank}</span>
                         </div>
                         <div className="text-subtitle text-gray-900 truncate">{entry.username}</div>
                         <div className="text-center">
-                          <span className={getPercentileColor(entry.averageScore)}>
+                          <span className={`text-subtitle ${getPercentileColor(entry.averageScore)}`}>
                             {entry.averageScore}
                           </span>
                         </div>
                         <div className="text-center">
-                          <span className={getPercentileColor(entry.avgFinalScore * 10)}>
+                          <span className={`text-subtitle ${getPercentileColor(entry.avgFinalScore * 10)}`}>
                             {entry.avgFinalScore.toFixed(1)}
                           </span>
                         </div>
                         <div className="text-center">
-                          <span className={getPercentileColor(entry.avgPromptChaining)}>
+                          <span className={`text-subtitle ${getPercentileColor(entry.avgPromptChaining)}`}>
                             {entry.avgPromptChaining.toFixed(0)}%
                           </span>
                         </div>
                         <div className="text-center">
-                          <span className={getPercentileColor(entry.avgCodeEvaluation)}>
+                          <span className={`text-subtitle ${getPercentileColor(entry.avgCodeEvaluation)}`}>
                             {entry.avgCodeEvaluation.toFixed(0)}%
                           </span>
                         </div>
                         <div className="text-center">
-                          <span className={getPercentileColor(entry.avgAccuracy)}>
+                          <span className={`text-subtitle ${getPercentileColor(entry.avgAccuracy)}`}>
                             {entry.avgAccuracy.toFixed(0)}%
                           </span>
                         </div>
-                        <div className="text-center text-body text-gray-700">{entry.totalSessions}</div>
-                        <div className="text-center text-body text-gray-700">{entry.totalPrompts}</div>
-                        <div className="text-center text-body text-gray-700">{entry.challengesCompleted}</div>
+                        <div className="text-center text-subtitle text-gray-700">{entry.totalSessions}</div>
+                        <div className="text-center text-subtitle text-gray-700">{entry.totalPrompts}</div>
+                        <div className="text-center text-subtitle text-gray-700">{entry.challengesCompleted}</div>
                       </div>
                     ))}
                   </div>

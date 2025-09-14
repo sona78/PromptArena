@@ -82,7 +82,7 @@ export function EditorProvider({ children }: { children: ReactNode }) {
   const [isExecuting, setIsExecuting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const [promptQualityScore, setPromptQualityScore] = useState(8.4);
+  const [promptQualityScore, setPromptQualityScore] = useState(0);
   const [promptMetrics, setPromptMetrics] = useState<Record<string, unknown> | null>(null);
   const [codeEvaluationScore, setCodeEvaluationScore] = useState<number | null>(null);
   const [promptChainingScore, setPromptChainingScore] = useState<number | null>(null);

@@ -738,14 +738,14 @@ zPlease try again or check your configuration.`);
         {activeTab === 'analyze' && (
           <div className="h-96 overflow-y-auto p-4 space-y-4">
             <Card className="bg-gray-50 border-gray-200 p-3">
-              <h3 className="text-sm font-medium text-gray-700 mb-2">
-                Token Counts
+              <h3 className="text-sm font-display-serif font-bold tracking-wide text-gray-700 mb-2">
+                TOKEN COUNTS
               </h3>
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
                     <span className="text-sm text-gray-600">Prompt:</span>
-                    <div className="text-lg font-bold text-blue-600">
+                    <div className="text-lg font-display-serif font-bold tracking-wide text-[#3073B7]">
                       {lastPromptTokenCount}
                     </div>
                     <span className="text-xs text-gray-500">tokens</span>
@@ -754,7 +754,7 @@ zPlease try again or check your configuration.`);
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
                     <span className="text-sm text-gray-600">Response:</span>
-                    <div className="text-lg font-bold text-green-600">
+                    <div className="text-lg font-display-serif font-bold tracking-wide text-[#00656B]">
                       {lastResponseTokenCount}
                     </div>
                     <span className="text-xs text-gray-500">tokens</span>
@@ -763,7 +763,7 @@ zPlease try again or check your configuration.`);
                 <div className="pt-2 border-t border-gray-300">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600">Total:</span>
-                    <div className="text-lg font-bold text-purple-600">
+                    <div className="text-lg font-display-serif font-bold tracking-wide text-[#953640]">
                       {lastPromptTokenCount + lastResponseTokenCount}
                     </div>
                     <span className="text-xs text-gray-500">tokens</span>
@@ -776,39 +776,38 @@ zPlease try again or check your configuration.`);
             </Card>
 
             <Card className="bg-gray-50 border-gray-200 p-3">
-              <h3 className="text-sm font-medium text-gray-700 mb-2">
-                Carbon Emissions
+              <h3 className="text-sm font-display-serif font-bold tracking-wide text-gray-700 mb-2">
+                CARBON EMISSIONS
               </h3>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-600">Total:</span>
-                <div className="text-lg font-bold text-gray-800">
+                <div className="text-lg font-display-serif font-bold tracking-wide text-gray-800">
                   {((lastPromptTokenCount * 0.0001) + (lastResponseTokenCount * 0.0003)).toFixed(4)}
                 </div>
                 <span className="text-xs text-gray-500">g CO₂</span>
               </div>
-              <div className="text-xs text-gray-500 mt-2">
-                Based on 0.0001g per input token, 0.0003g per output token
-              </div>
             </Card>
 
-            <Card className="bg-gray-50 border-gray-200 p-3">
-              <h3 className="text-sm font-medium text-gray-700 mb-2">
-                Prompt Quality Score
-              </h3>
-              <div className="flex items-center space-x-2">
-                <div className="flex-1 bg-gray-200 rounded-full h-2">
-                  <div 
-                    className="bg-emerald-500 h-2 rounded-full transition-all duration-300" 
-                    style={{ width: `${(promptQualityScore / 10) * 100}%` }}
-                  ></div>
+            {promptQualityScore > 0 && (
+              <Card className="bg-gray-50 border-gray-200 p-3">
+                <h3 className="text-sm font-medium text-gray-700 mb-2">
+                  Prompt Quality Score
+                </h3>
+                <div className="flex items-center space-x-2">
+                  <div className="flex-1 bg-gray-200 rounded-full h-2">
+                    <div 
+                      className="bg-emerald-500 h-2 rounded-full transition-all duration-300" 
+                      style={{ width: `${(promptQualityScore / 10) * 100}%` }}
+                    ></div>
+                  </div>
+                  <span className="text-sm font-medium text-emerald-600">{promptQualityScore}/10</span>
                 </div>
-                <span className="text-sm font-medium text-emerald-600">{promptQualityScore}/10</span>
-              </div>
-            </Card>
+              </Card>
+            )}
 
             <Card className="bg-gray-50 border-gray-200 p-3">
-              <h3 className="text-sm font-medium text-gray-700 mb-2">
-                Evaluation Metrics
+              <h3 className="text-sm font-display-serif font-bold tracking-wide text-gray-700 mb-2">
+                EVALUATION METRICS
               </h3>
               <div className="space-y-2 text-xs text-gray-600">
                 {promptMetrics ? (
