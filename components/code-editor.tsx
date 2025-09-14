@@ -7,8 +7,12 @@ import { Badge } from "@/components/ui/badge";
 import { Play, RotateCcw, Copy, FileText, Save } from "lucide-react";
 import { useEditor } from "./editor-context";
 import { ResultsPanel } from "./results-panel";
+import { useSearchParams } from 'next/navigation';
 
 export function CodeEditor() {
+  const searchParams = useSearchParams();
+  const sessionId = searchParams.get('session');
+  
   const {
     code,
     setCode,
@@ -21,36 +25,27 @@ export function CodeEditor() {
     isExecuting,
     setIsExecuting,
     isSaving,
-    hasUnsavedChanges
+    hasUnsavedChanges,
+    executeMultiFile
   } = useEditor();
 
   const handleRun = async () => {
-    setIsExecuting(true);
-    setExecutionResult(null);
-    
-    try {
-      const response = await fetch('/api/execute-code', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          code: code,
-          language: language
-        }),
-      });
-
-      const result = await response.json();
-      setExecutionResult(result);
-    } catch (error) {
+    if (!sessionId) {
       setExecutionResult({
         success: false,
         output: '',
-        error: 'Failed to execute code: Network error'
+        error: 'No session ID available'
       });
-    } finally {
-      setIsExecuting(false);
+      return;
     }
+
+    // Save current file before execution if there are unsaved changes
+    if (activeFile && hasUnsavedChanges) {
+      await saveFile();
+    }
+
+    // Execute all files in the session
+    await executeMultiFile(sessionId);
   };
 
   const handleReset = () => {

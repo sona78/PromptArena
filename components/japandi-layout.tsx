@@ -59,9 +59,6 @@ export function JapandiLayout({
                 >
                   Challenges
                 </button>
-                <button className="text-stone-600 hover:text-stone-800 transition-colors duration-300 text-sm font-light tracking-wide">
-                  Battles
-                </button>
               </div>
             </div>
 

@@ -40,6 +40,8 @@ interface EditorContextType {
   setPromptQualityScore: (score: number) => void;
   promptMetrics: any;
   setPromptMetrics: (metrics: any) => void;
+  getAllFiles: (sessionId: string) => Promise<{[filename: string]: string}>;
+  executeMultiFile: (sessionId: string, entryPoint?: string) => Promise<void>;
 }
 
 const EditorContext = createContext<EditorContextType | undefined>(undefined);
@@ -177,6 +179,111 @@ export function EditorProvider({ children }: { children: ReactNode }) {
     setHasUnsavedChanges(false);
   };
 
+  const getAllFiles = async (sessionId: string): Promise<{[filename: string]: string}> => {
+    try {
+      // Get list of all files in the session
+      const { data: fileList, error: listError } = await supabase.storage
+        .from('Sessions')
+        .list(sessionId, {
+          sortBy: { column: 'name', order: 'asc' }
+        });
+
+      if (listError) {
+        throw listError;
+      }
+
+      const files: {[filename: string]: string} = {};
+
+      // Download content for each file
+      for (const file of fileList || []) {
+        if (file.metadata) { // Only process actual files, not folders
+          try {
+            const { data: fileData, error: downloadError } = await supabase.storage
+              .from('Sessions')
+              .download(`${sessionId}/${file.name}`);
+
+            if (!downloadError && fileData) {
+              const content = await fileData.text();
+              files[file.name] = content;
+            }
+          } catch (error) {
+            console.error(`Error downloading file ${file.name}:`, error);
+            // Continue with other files even if one fails
+          }
+        }
+      }
+
+      return files;
+    } catch (error) {
+      console.error('Error fetching all files:', error);
+      throw error;
+    }
+  };
+
+  const executeMultiFile = async (sessionId: string, entryPoint: string = 'test') => {
+    setIsExecuting(true);
+    setExecutionResult(null);
+    
+    try {
+      // Get all files in the session
+      const files = await getAllFiles(sessionId);
+      
+      if (Object.keys(files).length === 0) {
+        setExecutionResult({
+          success: false,
+          output: '',
+          error: 'No files found in the session'
+        });
+        return;
+      }
+
+      // Determine the language based on file extensions
+      const fileNames = Object.keys(files);
+      let detectedLanguage = 'python'; // default
+      
+      if (fileNames.some(name => name.endsWith('.js') || name.endsWith('.jsx') || name.endsWith('.ts') || name.endsWith('.tsx'))) {
+        detectedLanguage = 'javascript';
+      }
+
+      // Find entry point file
+      let actualEntryPoint = entryPoint;
+      if (!files[entryPoint]) {
+        // Try common entry point names
+        const commonEntryPoints = ['test.py','main.py', 'index.js', 'app.py', 'main.js'];
+        const foundEntryPoint = commonEntryPoints.find(ep => files[ep]);
+        if (foundEntryPoint) {
+          actualEntryPoint = foundEntryPoint;
+        } else {
+          // Use the first file as entry point
+          actualEntryPoint = fileNames[0];
+        }
+      }
+
+      const response = await fetch('/api/execute-multi-file', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          files: files,
+          language: detectedLanguage,
+          entry_point: actualEntryPoint
+        }),
+      });
+
+      const result = await response.json();
+      setExecutionResult(result);
+    } catch (error) {
+      setExecutionResult({
+        success: false,
+        output: '',
+        error: 'Failed to execute multi-file code: Network error'
+      });
+    } finally {
+      setIsExecuting(false);
+    }
+  };
+
   // Debounced auto-save function
   const debouncedAutoSave = useDebounce(async () => {
     if (activeFile && hasUnsavedChanges && !isSaving) {
@@ -229,7 +336,9 @@ export function EditorProvider({ children }: { children: ReactNode }) {
       promptQualityScore,
       setPromptQualityScore,
       promptMetrics,
-      setPromptMetrics
+      setPromptMetrics,
+      getAllFiles,
+      executeMultiFile
     }}>
       {children}
     </EditorContext.Provider>
