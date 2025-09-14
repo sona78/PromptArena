@@ -22,6 +22,8 @@ interface EditorContextType {
   setIsExecuting: (executing: boolean) => void;
   promptQualityScore: number;
   setPromptQualityScore: (score: number) => void;
+  promptMetrics: any;
+  setPromptMetrics: (metrics: any) => void;
 }
 
 const EditorContext = createContext<EditorContextType | undefined>(undefined);
@@ -56,6 +58,7 @@ export function EditorProvider({ children }: { children: ReactNode }) {
   const [executionResult, setExecutionResult] = useState<ExecutionResult | null>(null);
   const [isExecuting, setIsExecuting] = useState(false);
   const [promptQualityScore, setPromptQualityScore] = useState(8.4);
+  const [promptMetrics, setPromptMetrics] = useState(null);
 
   const setLanguage = (newLanguage: 'javascript' | 'python') => {
     setLanguageState(newLanguage);
@@ -75,7 +78,9 @@ export function EditorProvider({ children }: { children: ReactNode }) {
       isExecuting,
       setIsExecuting,
       promptQualityScore,
-      setPromptQualityScore
+      setPromptQualityScore,
+      promptMetrics,
+      setPromptMetrics
     }}>
       {children}
     </EditorContext.Provider>

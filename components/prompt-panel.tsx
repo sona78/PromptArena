@@ -22,7 +22,7 @@ import { InfiniteScrollContainer } from "./infinite-scroll-container";
 export function PromptPanel() {
   const [prompt, setPrompt] = useState('');
   const [activeTab, setActiveTab] = useState('write');
-  const { code, setCode, isLoading, setIsLoading, promptQualityScore, setPromptQualityScore } = useEditor();
+  const { code, setCode, isLoading, setIsLoading, promptQualityScore, setPromptQualityScore, promptMetrics, setPromptMetrics } = useEditor();
 
   const handleSubmit = async () => {
     if (!prompt.trim()) {
@@ -40,33 +40,58 @@ Current code:
 ${code}
 \`\`\``;
 
-    const evaluationPrompt = `You are a prompt evaluation assistant. Given a user-supplied prompt (the "query"), you will evaluate its effectiveness according to the following metrics (derived from the Anthropic Prompt Engineering guidelines):
+    const evaluationPrompt = `You are a prompt evaluation assistant. Given a user-supplied prompt (the “query”), you will evaluate its effectiveness according to the following metrics (derived from the Anthropic Prompt Engineering guidelines):
 
-1. Clarity & Directness — Is the prompt clear, unambiguous, and direct about what is asked?
-2. Role Definition / System Context — Does the prompt give you a role or system context (e.g. "You are …") so you understand how to respond?
-3. Specificity / Constraints — Does the prompt include specific constraints (format, tone, length, domain, audience, etc.)?
-4. Use of Examples or Few-Shot Guidance — Does it use examples to illustrate what is wanted or show style/format?
-5. Chain of Thought / Reasoning Encouragement — Does it ask the model to think step by step or explain reasoning when needed?
-6. Prefilling / Preface / Structured Tags — Are there structured tags or prefilling that help guide response structure?
-7. Conciseness / Avoiding Redundancy — Is the prompt free from unnecessary words or confusing redundancy?
-8. Suitability of Tone / Audience — Is the tone and style appropriate for the target audience and use case?
-9. Success Criteria / Eval Metrics — Does the prompt define success criteria or what "good" looks like?
+        1. Clarity & Directness — Is the prompt clear, unambiguous, and direct about what is asked?
+        2. Role Definition / System Context — Does the prompt give you a role or system context (e.g. “You are …”) so you understand how to respond?
+        3. Specificity / Constraints — Does the prompt include specific constraints (format, tone, length, domain, audience, etc.)?
+        4. Use of Examples or Few-Shot Guidance — Does it use examples to illustrate what is wanted or show style/format?
+        5. Chain of Thought / Reasoning Encouragement — Does it ask the model to think step by step or explain reasoning when needed?
+        6. Prefilling / Preface / Structured Tags — Are there structured tags or prefilling that help guide response structure?
+        7. Conciseness / Avoiding Redundancy — Is the prompt free from unnecessary words or confusing redundancy?
+        8. Suitability of Tone / Audience — Is the tone and style appropriate for the target audience and use case?
+        9. Success Criteria / Eval Metrics — Does the prompt define success criteria or what “good” looks like?
 
----
+        ---
 
-Task:
+        Task:
 
-Given the user prompt below, evaluate it on each metric and then give it a score out of 10. 
-Return the score in a json format with key "score" as the only field.
-Your response should be in the following format:
-{
-    "score": 10
-}
+        Given the user prompt below, evaluate it on each metric giving it a score out of 10.
+        Then average the scores to get a final score out of 10.
+        Return the final score in a json format. It should have 10 keys, one for each metric and the last as a final score.
+        Your response should be in the following format:
+        {
+            "clarity": 10,
+            "role definition": 10,
+            "specificity": 10,
+            "use of examples": 10,
+            "chain of thought": 10,
+            "prefilling": 10,
+            "conciseness": 10,
+            "suitability of tone": 10,
+            "success criteria": 10
+            "final score": 10,
+        }
 
----
+        EXAMPLE:
+        User Prompt: "Write a prompt that generates a story about a dog."
+        Response:
+        {
+            "clarity": 5,
+            "role definition": 6,
+            "specificity": 4,
+            "use of examples": 0,
+            "chain of thought": 8,
+            "prefilling": 5,
+            "conciseness": 10,
+            "suitability of tone": 3,
+            "success criteria": 4,
+            "final score": 5.5,
+        }
 
-User Prompt:
-${prompt}`;
+        ---
+
+        User Prompt: ${prompt}`;
 
     try {
       // Run both the code modification and prompt evaluation in parallel
@@ -120,16 +145,21 @@ Please try again or check your configuration.`);
         try {
           // Extract JSON from Claude's response (it might have extra text)
           const content = evaluationData.content;
-          const jsonMatch = content.match(/\{[^}]*"score"[^}]*\}/);
+          const jsonMatch = content.match(/\{[\s\S]*?\}/);
           
           if (jsonMatch) {
             const evaluation = JSON.parse(jsonMatch[0]);
-            if (evaluation.score && typeof evaluation.score === 'number') {
-              setPromptQualityScore(evaluation.score);
+            
+            // Store all metrics
+            setPromptMetrics(evaluation);
+            
+            // Set the final score
+            if (evaluation['final score'] && typeof evaluation['final score'] === 'number') {
+              setPromptQualityScore(evaluation['final score']);
             }
           } else {
-            // Fallback: try to extract just the number after "score"
-            const scoreMatch = content.match(/"score":\s*(\d+(?:\.\d+)?)/);
+            // Fallback: try to extract just the number after "final score"
+            const scoreMatch = content.match(/"final score":\s*(\d+(?:\.\d+)?)/);
             if (scoreMatch) {
               const score = parseFloat(scoreMatch[1]);
               setPromptQualityScore(score);
@@ -347,33 +377,56 @@ Please check your internet connection and try again.`);
 
             <Card className="bg-gray-900 border-gray-700 p-3">
               <h3 className="text-sm font-medium text-gray-300 mb-2">
-                Predicted Performance
+                Evaluation Metrics
               </h3>
               <div className="space-y-2 text-xs text-gray-400">
-                <div className="flex justify-between">
-                  <span>Creativity Score:</span>
-                  <span className="text-blue-400">High</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Clarity:</span>
-                  <span className="text-emerald-400">Excellent</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Engagement:</span>
-                  <span className="text-yellow-400">Very Good</span>
-                </div>
+                {promptMetrics ? (
+                  Object.entries(promptMetrics)
+                    .filter(([key]) => key !== 'final score')
+                    .map(([key, value]) => (
+                      <div key={key} className="flex justify-between">
+                        <span className="capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}:</span>
+                        <span className={`font-medium ${
+                          typeof value === 'number' && value >= 8 ? 'text-emerald-400' :
+                          typeof value === 'number' && value >= 6 ? 'text-yellow-400' :
+                          typeof value === 'number' && value >= 4 ? 'text-orange-400' :
+                          'text-red-400'
+                        }`}>
+                          {typeof value === 'number' ? `${value}/10` : String(value)}
+                        </span>
+                      </div>
+                    ))
+                ) : (
+                  <div className="text-gray-500 text-center py-2">
+                    Submit a prompt to see detailed metrics
+                  </div>
+                )}
               </div>
             </Card>
 
-            <Card className="bg-gray-900 border-gray-700 p-3">
-              <h3 className="text-sm font-medium text-gray-300 mb-2">
-                Similar Prompts Performance
-              </h3>
-              <div className="text-xs text-gray-400">
-                Prompts with similar structure scored an average of{' '}
-                <span className="text-blue-400 font-medium">7.8/10</span>
-              </div>
-            </Card>
+            {promptMetrics && (
+              <Card className="bg-gray-900 border-gray-700 p-3">
+                <h3 className="text-sm font-medium text-gray-300 mb-2">
+                  Improvement Suggestions
+                </h3>
+                <div className="text-xs text-gray-400 space-y-1">
+                  {Object.entries(promptMetrics)
+                    .filter(([key, value]) => key !== 'final score' && typeof value === 'number' && value < 7)
+                    .map(([key, value]) => (
+                      <div key={key} className="text-orange-400">
+                        • Improve {key.replace(/([A-Z])/g, ' $1').trim().toLowerCase()} (currently {String(value)}/10)
+                      </div>
+                    ))}
+                  {Object.entries(promptMetrics)
+                    .filter(([key, value]) => key !== 'final score' && typeof value === 'number' && value < 7)
+                    .length === 0 && (
+                    <div className="text-emerald-400">
+                      Great job! All metrics are performing well.
+                    </div>
+                  )}
+                </div>
+              </Card>
+            )}
           </div>
         )}
 
