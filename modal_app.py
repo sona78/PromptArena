@@ -123,6 +123,7 @@ def _execute_python(code: str) -> Dict[str, Any]:
                 "dir": dir,
                 "help": help,
                 "__import__": __import__,
+                "__name__": __name__,
             }
         }
         

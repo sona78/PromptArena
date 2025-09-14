@@ -91,10 +91,16 @@ export default function DashboardPage() {
           return;
         }
 
-        // Create folder in storage bucket
+        // Create folder in storage bucket with appropriate starter file
+        const task = tasks.find(t => t.task_id === taskId);
+        const shouldCreatePython = task && (task.type === 0 || task.type === 2);
+
+        const fileName = shouldCreatePython ? 'main.py' : '.keep';
+        const fileContent = shouldCreatePython ? '# Write your code here\n' : '';
+
         const { error: storageError } = await supabase.storage
           .from('Sessions')
-          .upload(`${sessionId}/.keep`, new Blob([''], { type: 'text/plain' }));
+          .upload(`${sessionId}/${fileName}`, new Blob([fileContent], { type: 'text/plain' }));
 
         if (storageError) {
           console.error('Error creating storage folder:', storageError);
