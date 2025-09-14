@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter+Tight:wght@300;400;500;600;700&family=Crimson+Pro:wght@300;400;500;600&family=JetBrains+Mono:wght@300;400;500;600;700&family=Unbounded:wght@400;500;600;700;800;900&family=Oxygen:wght@300;400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter+Tight:wght@300;400;500;600;700&family=Crimson+Pro:wght@300;400;500;600&family=JetBrains+Mono:wght@300;400;500;600;700&family=Unbounded:wght@300;400;500;600;700;800;900&family=Open+Sans:wght@300;400;500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -90,7 +90,8 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground font-body;
+    @apply bg-background font-body font-light;
+    color: #28282D;
     font-size: 1rem;
     line-height: 1.6;
     letter-spacing: 0.005em;
@@ -115,7 +116,7 @@
   }
   
   .text-body {
-    @apply font-body;
+    @apply font-body font-light;
     font-size: 1rem;
     line-height: 1.6;
     letter-spacing: 0.005em;
@@ -185,21 +186,21 @@
   
   /* Normal Serif Font for Other Elements */
   .text-serif {
-    @apply font-serif;
+    @apply font-serif font-light;
     font-size: 1rem;
     line-height: 1.6;
     letter-spacing: 0.005em;
   }
   
   .text-serif-sm {
-    @apply font-serif;
+    @apply font-serif font-light;
     font-size: 0.875rem;
     line-height: 1.7;
     letter-spacing: 0.005em;
   }
   
   .text-serif-lg {
-    @apply font-serif;
+    @apply font-serif font-light;
     font-size: 1.125rem;
     line-height: 1.6;
     letter-spacing: 0.005em;

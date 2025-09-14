@@ -72,10 +72,10 @@ export function TaskHeader({ sessionId }: TaskHeaderProps) {
 
   const getTaskIcon = (taskType: number) => {
     switch (taskType) {
-      case 0: // Frontend
-        return <Monitor className="w-5 h-5 text-white" />;
-      case 1: // Backend
+      case 0: // Frontend tasks (now labeled as Backend)
         return <Server className="w-5 h-5 text-white" />;
+      case 1: // Backend tasks (now labeled as Frontend)
+        return <Monitor className="w-5 h-5 text-white" />;
       case 2: // Machine Learning
         return <Brain className="w-5 h-5 text-white" />;
       default:
@@ -85,9 +85,9 @@ export function TaskHeader({ sessionId }: TaskHeaderProps) {
 
   const getTaskIconBackground = (taskType: number) => {
     switch (taskType) {
-      case 0: // Frontend
+      case 0: // Frontend tasks (now labeled as Backend)
         return "bg-[#C5AECF]";
-      case 1: // Backend
+      case 1: // Backend tasks (now labeled as Frontend)
         return "bg-[#46295A]";
       case 2: // Machine Learning
         return "bg-[#D79D00]";
