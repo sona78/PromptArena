@@ -134,8 +134,8 @@ export default function LeaderboardPage() {
 
         <div className="max-w-7xl mx-auto px-6 py-8">
           <div className="mb-8">
-            <h1 className="text-title-lg text-gray-900 mb-2">Leaderboard</h1>
-            <p className="text-body-lg text-gray-600">Top performing prompt engineers in our community.</p>
+            <h1 className="text-section-header-lg text-[#28282D] mb-2">LEADERBOARD</h1>
+            <p className="text-serif-lg text-[#79797C]">Top performing prompt engineers in our community.</p>
           </div>
 
           {/* Filter Dropdowns */}
