@@ -33,7 +33,7 @@ export function FileSystemSidebar({ sessionId }: FileSystemSidebarProps) {
   const [newFileName, setNewFileName] = useState('');
   const [entryFile, setEntryFile] = useState<string>('');
   const [testFile, setTestFile] = useState<string>('');
-  const { openFile, activeFile, closeFile } = useEditor();
+  const { openFile, activeFile, closeFile, codeEvaluationScore, promptChainingScore, codeAccuracyScore } = useEditor();
 
   useEffect(() => {
     if (sessionId) {
@@ -413,6 +413,36 @@ export function FileSystemSidebar({ sessionId }: FileSystemSidebarProps) {
 
       {/* Actions */}
       <div className="p-2 border-t border-gray-800 space-y-2">
+        {/* Evaluation Scores */}
+        {(codeEvaluationScore !== null || promptChainingScore !== null || codeAccuracyScore !== null) && (
+          <div className="space-y-2">
+            {codeEvaluationScore !== null && (
+              <div className="bg-gray-800 border border-gray-700 rounded-md p-2 text-center">
+                <div className="text-xs text-gray-400 mb-1">Code Quality Score</div>
+                <div className="text-lg font-bold text-blue-400">
+                  {(codeEvaluationScore * 100).toFixed(0)}%
+                </div>
+              </div>
+            )}
+            {promptChainingScore !== null && (
+              <div className="bg-gray-800 border border-gray-700 rounded-md p-2 text-center">
+                <div className="text-xs text-gray-400 mb-1">Prompt Chaining Score</div>
+                <div className="text-lg font-bold text-green-400">
+                  {(promptChainingScore * 100).toFixed(0)}%
+                </div>
+              </div>
+            )}
+            {codeAccuracyScore !== null && (
+              <div className="bg-gray-800 border border-gray-700 rounded-md p-2 text-center">
+                <div className="text-xs text-gray-400 mb-1">Code Accuracy Score</div>
+                <div className="text-lg font-bold text-purple-400">
+                  {(codeAccuracyScore * 100).toFixed(0)}%
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+        
         <Button
           onClick={handleCreateFile}
           className="w-full text-xs bg-blue-600 hover:bg-blue-700 text-white"

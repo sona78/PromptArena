@@ -40,6 +40,12 @@ interface EditorContextType {
   setPromptQualityScore: (score: number) => void;
   promptMetrics: any;
   setPromptMetrics: (metrics: any) => void;
+  codeEvaluationScore: number | null;
+  setCodeEvaluationScore: (score: number | null) => void;
+  promptChainingScore: number | null;
+  setPromptChainingScore: (score: number | null) => void;
+  codeAccuracyScore: number | null;
+  setCodeAccuracyScore: (score: number | null) => void;
   getAllFiles: (sessionId: string) => Promise<{[filename: string]: string}>;
   executeMultiFile: (sessionId: string, entryPoint?: string) => Promise<void>;
 }
@@ -96,6 +102,9 @@ export function EditorProvider({ children }: { children: ReactNode }) {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [promptQualityScore, setPromptQualityScore] = useState(8.4);
   const [promptMetrics, setPromptMetrics] = useState(null);
+  const [codeEvaluationScore, setCodeEvaluationScore] = useState<number | null>(null);
+  const [promptChainingScore, setPromptChainingScore] = useState<number | null>(null);
+  const [codeAccuracyScore, setCodeAccuracyScore] = useState<number | null>(null);
 
   const setLanguage = (newLanguage: 'javascript' | 'python') => {
     if (!activeFile) {
@@ -273,6 +282,91 @@ export function EditorProvider({ children }: { children: ReactNode }) {
 
       const result = await response.json();
       setExecutionResult(result);
+
+      // Run all three evaluations in parallel and wait for all to complete
+      const evaluationPromises = [];
+
+      // Code evaluation promise
+      const codeEvaluationPromise = fetch('/api/evaluate-code', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          files: files
+        }),
+      }).then(response => response.json()).catch(error => {
+        console.error('Code evaluation error:', error);
+        return { success: false };
+      });
+
+      // Prompt evaluation promise
+      const promptEvaluationPromise = (async () => {
+        try {
+          const { data: session, error: sessionError } = await supabase
+            .from('Sessions')
+            .select('prompts')
+            .eq('session_id', sessionId)
+            .single();
+
+          if (!sessionError && session?.prompts && session.prompts.length > 0) {
+            const response = await fetch('/api/evaluate-prompts', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                prompts: session.prompts
+              }),
+            });
+            return await response.json();
+          }
+          return { success: false };
+        } catch (error) {
+          console.error('Prompt evaluation error:', error);
+          return { success: false };
+        }
+      })();
+
+      // Accuracy evaluation promise
+      const executionText = result.success ? result.output : result.error;
+      const accuracyEvaluationPromise = executionText ? 
+        fetch('/api/evaluate-accuracy', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            output: executionText
+          }),
+        }).then(response => response.json()).catch(error => {
+          console.error('Code accuracy evaluation error:', error);
+          return { success: false };
+        }) : Promise.resolve({ success: false });
+
+      // Wait for all evaluations to complete
+      try {
+        const [codeEvaluationResult, promptEvaluationResult, accuracyEvaluationResult] = await Promise.all([
+          codeEvaluationPromise,
+          promptEvaluationPromise,
+          accuracyEvaluationPromise
+        ]);
+
+        // Set all scores at once after all evaluations are complete
+        if (codeEvaluationResult.success && codeEvaluationResult.evaluation) {
+          setCodeEvaluationScore(codeEvaluationResult.evaluation.FinalScore);
+        }
+
+        if (promptEvaluationResult.success && promptEvaluationResult.evaluation) {
+          setPromptChainingScore(promptEvaluationResult.evaluation.PromptChainingScore);
+        }
+
+        if (accuracyEvaluationResult.success && accuracyEvaluationResult.evaluation) {
+          setCodeAccuracyScore(accuracyEvaluationResult.evaluation.AccuracyScore);
+        }
+      } catch (error) {
+        console.error('Error running evaluations:', error);
+      }
     } catch (error) {
       setExecutionResult({
         success: false,
@@ -337,6 +431,12 @@ export function EditorProvider({ children }: { children: ReactNode }) {
       setPromptQualityScore,
       promptMetrics,
       setPromptMetrics,
+      codeEvaluationScore,
+      setCodeEvaluationScore,
+      promptChainingScore,
+      setPromptChainingScore,
+      codeAccuracyScore,
+      setCodeAccuracyScore,
       getAllFiles,
       executeMultiFile
     }}>
