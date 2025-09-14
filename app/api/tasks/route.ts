@@ -52,9 +52,8 @@ export async function POST(request: NextRequest) {
         name: name.trim(),
         description: description.trim(),
         type: parseInt(type) || 0,
-        test_file_name: test_file_name?.trim() || null,
-        has_template_files: has_files || false,
-        leaderboard: []
+        test_file: test_file_name?.trim() || null,
+        criteria: null // Add criteria field as it exists in schema
       }])
       .select()
       .single();

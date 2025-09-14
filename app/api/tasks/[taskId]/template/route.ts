@@ -19,10 +19,10 @@ export async function GET(
       );
     }
 
-    // First check if the task exists and has template files
+    // First check if the task exists
     const { data: task, error: taskError } = await supabase
       .from('Tasks')
-      .select('task_id, name, has_template_files, test_file_name')
+      .select('task_id, name, test_file')
       .eq('task_id', taskId)
       .single();
 
@@ -33,16 +33,8 @@ export async function GET(
       );
     }
 
-    if (!task.has_template_files) {
-      return NextResponse.json({
-        success: true,
-        files: {},
-        task_info: {
-          name: task.name,
-          test_file_name: task.test_file_name
-        }
-      });
-    }
+    // Always try to list files from storage - if none exist, return empty
+    // This removes the dependency on has_template_files column
 
     // List all files in the task's template folder
     const { data: fileList, error: listError } = await supabase.storage
@@ -89,7 +81,7 @@ export async function GET(
       files,
       task_info: {
         name: task.name,
-        test_file_name: task.test_file_name
+        test_file: task.test_file
       }
     });
 
